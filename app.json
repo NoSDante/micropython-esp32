@@ -1,0 +1,19 @@
+{
+    "WEB" : {
+        "INIT" : false
+    }
+    "LIGHTSTRIP: {
+        "PIXEL": 8
+        "MODUL":
+    },
+    "LOG  : {
+        MONITORING" : {
+            "FILE" : "monitoring.csv"
+            "PATH" : "/log/monitoring"
+        },
+        ERRORS" : {
+            "FILE" : "errors.csv"
+            "PATH" : "/log/app"
+        }    
+    }
+}
