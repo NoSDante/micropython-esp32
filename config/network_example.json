@@ -1,0 +1,24 @@
+{
+    "default"      : {
+            "essid"     : "router"
+            "password"  : "7612536812763"
+            "static_ip" : false
+            "ip"        : "192.168.2.1"
+            "subnet"    : "255.255.255.0"
+            "gateway"   : "192.168.2.1"
+            "dns"       : "192.168.2.1"
+     },
+     "WLAN-001" : {
+            "essid"     : "WLAN-001"
+            "password"  : "09128309809"
+            "static_ip" : true
+            "ip"        : "192.168.2.1"
+            "subnet"    : "255.255.255.0"
+            "gateway"   : "192.168.2.1"
+            "dns"       : "192.168.2.1"			
+      },
+     "WLAN-002" : {
+            "essid"     : "Hotspot"
+            "password"  : "9812739812"
+      }
+}
