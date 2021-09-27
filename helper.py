@@ -1,5 +1,5 @@
 # helper
-print('\n<<<helper.py>>>\n')
+print('helper...')
 
 def scan_i2c_bus(i2c):
     devices = i2c.scan()
