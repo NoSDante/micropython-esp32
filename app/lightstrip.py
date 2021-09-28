@@ -11,29 +11,19 @@ class Lightstrip():
             self.n = self.neopixel.n
         else:
             self.n = pixel
-            
+    
     def color(self, color="WHITE"):
         for i in range(self.n):
             self.neopixel[i] = (self.rgb(color))
         self.neopixel.write()
-      
+    
     def each(self, each, color="WHITE", clear=True):
         for i in range(self.n):
             if ((i+each) % 2) == 0:
                 self.neopixel[i] = (self.rgb(color))
         self.neopixel.write()
         if clear: self.clear()
-           
-    async def cycle(self, color="WHITE", wait=60, clear=True):
-        # cycle
-        for i in range(4 * self.n):
-            for j in range(self.n):
-                 self.neopixel[j] = (0, 0, 0)
-            self.neopixel[i % self.n] = (self.rgb(color))
-            self.neopixel.write()
-            await asyncio.sleep_ms(wait)
-        if clear: self.clear()
-        
+    
     def bounce(self, color="WHITE", wait=120, clear=True):
         for i in range(4 * self.n):
             for j in range(self.n):
@@ -45,6 +35,12 @@ class Lightstrip():
             self.neopixel.write()
             await asyncio.sleep_ms(wait)
         if clear: self.clear()
+    
+    # clear all pixels
+    def clear(self):
+        for i in range(self.n):
+            self.neopixel[i] = (0, 0, 0)
+        self.neopixel.write()
     
     async def fade(self, wait=60, clear=True):
         # fade in/out
@@ -58,15 +54,20 @@ class Lightstrip():
             self.neopixel.write()
         await asyncio.sleep_ms(wait)
         if clear: self.clear()
-       
-    def clear(self):
-        # clear
-        for i in range(self.n):
-            self.neopixel[i] = (0, 0, 0)
-        self.neopixel.write()
     
+    async def cycle(self, color="WHITE", wait=60, clear=True):
+        # cycle
+        for i in range(4 * self.n):
+            for j in range(self.n):
+                 self.neopixel[j] = (0, 0, 0)
+            self.neopixel[i % self.n] = (self.rgb(color))
+            self.neopixel.write()
+            await asyncio.sleep_ms(wait)
+        if clear: self.clear()
+    
+    # rgb color collection
     def rgb(self, color):
-        
+        default = "WHITE"        
         colors = {
             "RED"           : ( 255,  10,  10 ),
             "GREEN"         : (   0, 128,   0 ),
@@ -85,13 +86,16 @@ class Lightstrip():
             "ORANGE RED"    : ( 255,  69,    0)
         }
         
-        if color in colors:
-            r = colors[color][0]
-            g = colors[color][1]
-            b = colors[color][2]
-            return r, g, b
-        else:
-            raise ValueError("rgb color does not exist")
+        # return a default color if not exists
+        if not color in colors:
+            #raise ValueError("rgb color does not exist")
+            print("color {} does not exist").format(color)
+            color = default
+        
+        r = colors[color][0]
+        g = colors[color][1]
+        b = colors[color][2]
+        return r, g, b
     
     def demo(self):       
         # cycle
