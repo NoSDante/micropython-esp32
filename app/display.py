@@ -50,15 +50,14 @@ class Display(object):
             "ORANGE RED"    : ( 255,  69,    0)
         }
         
-        if color in colors:
-            r = colors[color][0]
-            g = colors[color][1]
-            b = colors[color][2]
-            return r, g, b
-        else:
-            #raise ValueError("color does not exist")
-            print("color does not exist")
-            return colors["WHITE"]
+        if not color in colors:
+            print("color {} does not exist").format(color)
+            color = "WHITE"
+         
+         r = colors[color][0]
+         g = colors[color][1]
+         b = colors[color][2]
+         return r, g, b
 
     def color(self, color):
         r, g, b = self.rgb(color)
