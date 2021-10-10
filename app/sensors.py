@@ -205,7 +205,7 @@ class Sensors():
         
         self.mq2 = MQ2(pinData=pin_analog, baseVoltage=baseVoltage, measuringStrategy=STRATEGY_FAST)
         self.mq2.calibration = False
-        self.mq2.data = {}
+        self.mq2.data = None
 
         # Calibration default sampletime 5000ms x (5)
         if calibrate:
@@ -247,41 +247,35 @@ class Scoring(object):
     
     def temperature(self, value):
         status = ""
-        if value is None:
-            return status
+        if value is None: return status
+        if value <= 0:
+            status = "FREEZE"
         return status
     
     def heatindex(self, temp, hum):
-        
+        status = "UNKNOWN"
         if temp is None or hum is None:
             return temp, status
-        
         # Convert celius to fahrenheit (heat-index is only fahrenheit compatible)
         fahrenheit = ((temp * 9/5) + 32)
         hi = None
-        
         if fahrenheit >= 80 and hum >= 40:
-            
             # Creating multiples of 'fahrenheit' & 'hum' values for the coefficients
             T2 = pow(fahrenheit, 2)
             T3 = pow(fahrenheit, 3)
             H2 = pow(hum, 2)
             H3 = pow(hum, 3)
-            
             # Coefficients for the calculations
             C1 = [ -42.379, 2.04901523, 10.14333127, -0.22475541, -6.83783e-03, -5.481717e-02, 1.22874e-03, 8.5282e-04, -1.99e-06]
             C2 = [ 0.363445176, 0.988622465, 4.777114035, -0.114037667, -0.000850208, -0.020716198, 0.000687678, 0.000274954, 0]
             C3 = [ 16.923, 0.185212, 5.37941, -0.100254, 0.00941695, 0.00728898, 0.000345372, -0.000814971, 0.0000102102, -0.000038646, 0.0000291583, 0.00000142721, 0.000000197483, -0.0000000218429, 0.000000000843296, -0.0000000000481975]
-
             # Calculating heat-indexes with 3 different formula
             heatindex1 = C1[0] + (C1[1] * fahrenheit) + (C1[2] * hum) + (C1[3] * fahrenheit * hum) + (C1[4] * T2) + (C1[5] * H2) + (C1[6] * T2 * hum) + (C1[7] * fahrenheit * H2) + (C1[8] * T2 * H2)
             heatindex2 = C2[0] + (C2[1] * fahrenheit) + (C2[2] * hum) + (C2[3] * fahrenheit * hum) + (C2[4] * T2) + (C2[5] * H2) + (C2[6] * T2 * hum) + (C2[7] * fahrenheit * H2) + (C2[8] * T2 * H2)
             heatindex3 = C3[0] + (C3[1] * fahrenheit) + (C3[2] * hum) + (C3[3] * fahrenheit * hum) + (C3[4] * T2) + (C3[5] * H2) + (C3[6] * T2 * hum) + (C3[7] * fahrenheit * H2) + (C3[8] * T2 * H2) + (C3[9] * T3) + (C3[10] * H3) + (C3[11] * T3 * hum) + (C3[12] * fahrenheit * H3) + (C3[13] * T3 * H2) + (C3[14] * T2 * H3) + (C3[15] * T3 * H3)
-            
             hi = round(((((heatindex1+heatindex2+heatindex3)//3) - 32) * 5/9), 0)
             hi = int(hi)
-            
-        status = "UNKNOWN"
+        # scoring state
         if hi:
             if hi in range(27, 32):
                 status = "CAUTION"
@@ -294,11 +288,11 @@ class Scoring(object):
         return hi, status
     
     def humidity(self, value):
-        status = "DEFAULT"
+        status = ""
         return status
     
     def dust(self, value):
-        status = "DEFAULT"
+        status = ""
         return status
     
     def color(self, value):
@@ -318,7 +312,8 @@ class Scoring(object):
                 "COLD"      : ("MEDIUM BLUE"),
                 "FREEZE"    : ("BLUE"),
                 "DEFAULT"   : ("WHITE"),          
-                "UNKNOWN"   : ("ORANGE RED")
+                "UNKNOWN"   : ("ORANGE RED"),
+                ""          : ("WHITE")
         }
         if value in colors:
             return colors[value]

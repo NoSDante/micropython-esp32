@@ -13,20 +13,17 @@ class Database():
         self.create = create
         self.database = database
         self.pagesize = pagesize
-        self.opened = 0
         self._open()
 
     def _open(self):
-        if self.opened != 1:
-            try:
-                self.file = open(self.database, "r+b")
-            except OSError:
-                if self.create: self.file = open(self.database, "w+b")
-                else: raise self.NotFoundException("database does not exist")
-                #else: return
-            # Open a database itself
-            self.btree = btree.open(self.file, pagesize=self.pagesize)
-            self.opened = 1
+        try:
+            self.file = open(self.database, "r+b")
+        except OSError:
+            if self.create: self.file = open(self.database, "w+b")
+            else: raise self.NotFoundException("database does not exist")
+            #else: return
+        # Open a database itself
+        self.btree = btree.open(self.file, pagesize=self.pagesize)
 
     def _close(self):
         self.file.close()
@@ -73,7 +70,7 @@ class Database():
             self._open()   
             del self.btree[key]
             self.btree.flush()
-            self._close()
+        self._close()
     
     def drop(self):
         """

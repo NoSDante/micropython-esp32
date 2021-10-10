@@ -1,19 +1,19 @@
 {
-    "I2C"   : {
+    "I2C" : {
         "SLOT" : 1
         "SDA"  : 21
         "SCL"  : 22
         "FREQ" : 400000
     },
-    "MQ2"   : {
-        "INIT"        : false
+    "MQ2" : {
+        "INIT"        : true
         "INTERVAL"    : 1
         "ANALOG_PIN"  : 34
-        "DIGITAL_PIN" : 26
-        "CALIBRATION" : false
-        "BASEVOLTAGE" : 5
+        "DIGITAL_PIN" : 0
+        "CALIBRATE"   : false
+        "BASEVOLTAGE" : 5.0
     },
-    "SPS30"  : {
+    "SPS30" : {
         "INIT"     : false
         "INTERVAL" : 2
         "SAMPLE"   : 1200
@@ -21,7 +21,7 @@
         "RX_PIN"   : 32
         "TX_PIN"   : 33
     },
-    "SCD30"  : {
+    "SCD30" : {
         "INIT"               : true
         "INTERVAL"           : 2
         "START"              : true
@@ -33,9 +33,14 @@
     },
     "AS3935" : {
         "INIT"        : true
+        "INTERVAL"    : 1
         "IRQ_PIN"     : 25
         "INDOOR"      : true
         "DISTURBER"   : true
         "CAPACITANCE" : 120
+    },
+    "BH1750" : {
+        "INIT"        : true
+        "INTERVAL"    : 2
     }
 }
