@@ -6,7 +6,7 @@ class Timezone():
     NTP_DELTA = 3155673600
     
     def __init__(self, utc=0):
-        #if not isinstance(utc, int): raise ValueError('UTC must be an integer')
+        if not isinstance(utc, int): raise ValueError('UTC must be an integer')
         self.utc = utc
         
     def gettime(self):
