@@ -1,3 +1,4 @@
 /config_debug
+/config/network_copy.json
 /www/microweb
 *.db
