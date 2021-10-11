@@ -55,7 +55,7 @@ class Lightstrip():
         await asyncio.sleep_ms(wait)
         if clear: self.clear()
     
-    async def cycle(self, color="WHITE", times=1, wait=60, clear=True):
+    async def cycle(self, color="WHITE", times=1 wait=60, clear=True):
         # cycle
         for i in range(times * self.n):
             for j in range(self.n):

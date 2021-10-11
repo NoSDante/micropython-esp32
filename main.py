@@ -1,24 +1,25 @@
-import gc, machine
+import gc
 from app.database import Database
+
 
 # main
 print("main...")
 
 def init():
     
-    """    
+    """
     Define db-files
-    """    
+    """
     BOOT_DATABASE = "/boot.db"
     SYSTEM_DATABASE = "/system.db"
     
-    """    
+    """
     Initialize db-tree class
     Get init params from boot db-file
     """
     boot = Database(BOOT_DATABASE)
     init = boot.get("BOOT")
-        
+    
     """
     NOTE:
     Cannot initialize the system without config
@@ -27,19 +28,12 @@ def init():
         raise RuntimeError("boot config missing")
     
     """
+    NOTE:
     Define default system params as fallback
     """
-    debug = False             # debug modus
-    mounted = False           # is SDCard mounted
-    wifi = False              # is WiFi enabled
-    connected = False         # is WiFi connected
-    ap = False                # is Access Point running
-    timesync = False          # is ntptime set
-    ip_address = "0.0.0.0"    # set IP Adress if connected or Access Point is running
-    ap_ip_address = "0.0.0.0" # set IP Adress if connected or Access Point is running
-    reconnect = 0             # interval for network reconnecting, 0 disabled
-    rtc = False               # use ext RTC
-    utc = 0                   # default Timezone (UTC+0)
+    debug, mounted, wifi, connected, ap, timesync, rtc = False, False, False, False, False, False, False
+    ip_address, ap_ip_address = "0.0.0.0", "0.0.0.0"
+    reconnect, utc = 0, 0
     
     """
     Debug modus
@@ -62,15 +56,17 @@ def init():
         4
         -------------------------------------------
         """
-        print("reset cause:", machine.reset_cause())
-        print("wake reason:", machine.wake_reason())        
+        from machine import reset_cause, wake_reason
+        from  esp32 import raw_temperature
+        print("\n----- MACHINE -----")
+        print("reset cause:", reset_cause())
+        print("wake reason:", wake_reason())
+        print("esp32 raw temperature: {} °C | {} °F".format((raw_temperature()-32)*5/9, raw_temperature()))
         device = boot.get("DEVICE")
         if device is not None:
             print("\n----- DEVICE -----")
             for key, value in device.items():
                 print(key + ": " + str(value))
-            print("\n")
-    
     """
     NOTE:
     First try to mount SDCard
@@ -80,16 +76,15 @@ def init():
     if init.get("SDCARD"):
         from sdcard import mount
         mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
-        
+    
     """
     NOTE:
-    NETWORK connection routine
     Smart connect - trys to connect each network saved in network.db
     Default - connect to the default network saved in network.db or network.json
-    """    
+    """
     if init.get("NETWORK"):
-        print("network...")
-        from app.wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
+        print("\nnetwork...")
+        from wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
         network = boot.get("NETWORK")
         if network.get("WIFI"):
             wifi = True
@@ -112,43 +107,40 @@ def init():
             if ip is not None: ip_address = ip
             """
             NOTE:
-            Online connection neccessary
-            timeset by online host
             Declare Timezone UTC+ to set an offset for the RTC
-            try:
-                from timezone import Timezone
-                timezone = boot.get("TIMEZONE")
-                utc = timezone.get("UTC")
-                if debug: print(timezone.get("ZONE"))
-                Timezone(utc).settime()
-                timesync = True
-                print('time synchronized')
-            except Exception as e:
-                print('setting time failed')
             """
+            from timezone import Timezone
+            timezone = boot.get("TIMEZONE")
+            utc = timezone.get("UTC")
+            if debug: print("TIMEZONE:", timezone.get("ZONE"))   
             """
-            NOTE:
-            Online connection neccessary
-            timeset by ntptime modul (from online host)
-            Declare Timezone UTC+ to set an offset for the RTC
+            NOTE: Online connection neccessary
+            timeset by ntptime modul
             """
             try:
                 from ntptime import settime
-                from timezone import Timezone
-                timezone = boot.get("TIMEZONE")
-                utc = timezone.get("UTC")
-                if debug: print("TIMEZONE:", timezone.get("ZONE"))
                 settime()
                 Timezone(utc).offset()
                 timesync = True
                 print('time synchronized')
             except Exception as e:
-                print('setting time failed')
-        else:
-            if boot.get("RTC"):
+                print('setting time failed')          
+            """
+            NOTE: Online connection neccessary
+            Backup timeset by online host
+            """
+            if not timesync:
+                try:
+                    Timezone(utc).settime()
+                    timesync = True
+                    print('time synchronized')
+                except Exception as e:
+                    print('setting time failed')
+            
+        elif boot.get("RTC"):
                 print("TODO: sync time by RTC modul...")
                 print("MODUL:", boot.get("RTC").get("MODUL"))
-
+    
     """
     NOTE:
     Store states in db-file to controll system in process
@@ -173,7 +165,6 @@ def init():
         for key in keys:
             value = system.get(key)
             print("{}: {}".format(key, value))
-        print("\n")
     
     # delete database objects
     del boot

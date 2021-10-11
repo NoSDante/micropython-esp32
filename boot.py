@@ -9,6 +9,7 @@ def no_debug():
     esp.osdebug(None)
     
 if not "boot.db" in os.listdir():
+    print('setup...')
     try:
         from setup import setup
         setup()

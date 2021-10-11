@@ -5,7 +5,14 @@
     "DISPLAY" : {
         "INIT"     : true
         "INTERVAL" : 5
-    },  
+    },
+    "LOG" : {
+        "INIT"      : true
+        "PATH"      : "/log/"
+        "FILE"      : "data"        
+        "MIMETYPE"  : "csv"
+        "TOSDCARD"  : true
+    },
     "LIGHTSTRIP": {
         "INIT"     : true
         "PIXEL"    : 8
