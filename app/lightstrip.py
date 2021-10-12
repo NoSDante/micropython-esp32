@@ -12,6 +12,7 @@ class Lightstrip():
         else:
             self.n = pixel
     
+    # light all pixels
     def color(self, color="WHITE"):
         for i in range(self.n):
             self.neopixel[i] = (self.rgb(color))
@@ -24,6 +25,7 @@ class Lightstrip():
         self.neopixel.write()
         if clear: self.clear()
     
+    # bounce    
     def bounce(self, color="WHITE", wait=120, clear=True):
         for i in range(4 * self.n):
             for j in range(self.n):
@@ -42,8 +44,9 @@ class Lightstrip():
             self.neopixel[i] = (0, 0, 0)
         self.neopixel.write()
     
+    # fade in/out    
     async def fade(self, wait=60, clear=True):
-        # fade in/out
+        
         for i in range(0, 4 * 256, 8):
             for j in range(self.n):
                 if (i // 256) % 2 == 0:
@@ -55,8 +58,8 @@ class Lightstrip():
         await asyncio.sleep_ms(wait)
         if clear: self.clear()
     
+    # cycle
     async def cycle(self, color="WHITE", times=1, wait=60, clear=True):
-        # cycle
         for i in range(times * self.n):
             for j in range(self.n):
                  self.neopixel[j] = (0, 0, 0)
@@ -85,22 +88,10 @@ class Lightstrip():
             "BLUE"          : (   0,   0,  255),
             "ORANGE RED"    : ( 255,  69,    0)
         }
-        
-        # return a default color if not exists
         if not color in colors:
-            #raise ValueError("rgb color does not exist")
-            print("color {} does not exist").format(color)
+            print("color '{}' does not exist").format(color)
             color = default
-        
         r = colors[color][0]
         g = colors[color][1]
         b = colors[color][2]
         return r, g, b
-    
-    def demo(self):       
-        # cycle
-        self.cycle()
-        # bounce
-        self.bounce()
-        # clear
-        self.clear()

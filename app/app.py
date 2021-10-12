@@ -2,14 +2,14 @@ from machine import Pin
 from time import sleep, sleep_ms, localtime, mktime, ticks_ms, ticks_diff
 import uasyncio as asyncio
 
-# custom libs
+# Custom libs
 from app.database import Database
 from app.state import State
 from app.display import Display
 from app.lightstrip import Lightstrip
 from app.sensors import Sensors, Scoring
 
-# system controls
+# System controls
 system = Database("/system.db")
 debug = system.get("DEBUG")
 
@@ -20,6 +20,7 @@ state = State(
     wifi = system.get("WIFI"),
     connected = system.get("CONNECTED"),
     ap = system.get("AP"),
+    ap_if = system.get("AP_IF"),
     ready = False,
     lightshow = 0
 )
@@ -27,10 +28,10 @@ state = State(
 # Lightstrip Demo
 async def runLightstripDemo(lightstrip):
     while state.get('ready') is not True:
-        await lightstrip.each( 1, color="DARK ORANGE", clear=False)
+        lightstrip.each( 1, color="DARK ORANGE", clear=False)
         await asyncio.sleep(0.5)
         lightstrip.clear()
-        await lightstrip.each( 2, color="DARK ORANGE", clear=False)
+        lightstrip.each( 2, color="DARK ORANGE", clear=False)
         await asyncio.sleep(0.5)
         lightstrip.clear()
     await lightstrip.bounce(color="GREEN")
@@ -135,7 +136,7 @@ async def runCounter(interval=1):
 
 # Network reconnecting loop
 async def runReconnect(interval=3600):
-    from wifi import smart_connect, is_connected, get_ip
+    from wifi import smart_connect, is_connected, get_ip, get_ip_ap, start_ap, stop_ap
     while state.get('reconnect') > 0:
         await asyncio.sleep(interval)
         if debug: print('network' , end=' ')
@@ -144,6 +145,9 @@ async def runReconnect(interval=3600):
             smart_connect()
             #connect()
             if is_connected():
+                if state.get('ap_if'):
+                    stop_ap()
+                    state.set("ap_ip_address", "0.0.0.0")
                 state.set("connected", True)
                 state.set("ip_address", get_ip())
                 interval = state.get('reconnect')
@@ -156,13 +160,23 @@ async def runReconnect(interval=3600):
                     settime()
                     Timezone(utc).offset()                    
                     state.set('timesync', True)
-                    if debug: print('Time synchronized')
+                    if debug: print('time synchronized')
             else:
                 state.set("connected", False)
                 state.set("ip_address", "0.0.0.0")
                 interval = 900
-        else:
-            if debug: print('connected')
+                if state.get('ap_if'):
+                    start_ap()
+                    state.set("ap_ip_address", get_ap_ip())
+
+# Logger loop
+async def runLogger(interval=60):
+    await asyncio.sleep(20)
+    while 1:
+        if debug: print("logging...")
+        if hasattr(sensor, 'scd30'):
+            print("log scd30 data")
+        await asyncio.sleep(interval)
 
 # AS3935 loop
 async def runWatchdogLightning(as3935, ligthstrip, interval=1):
@@ -227,18 +241,18 @@ async def runWatchdogCO2(scd30, interval=2):
             while scd30.get_status_ready() != 1:
                 await asyncio.sleep_ms(200)
             co2, temp, relh = scd30.read_measurement()
-            co2 = int(co2)
+            co2  = int(co2)
             temp = round(temp, 1)
             relh = int(relh)
             if len(scd30.data) != 0:
                 if co2 < scd30.data.get("co2_min") or co2_min == 0: co2_min = co2
                 if co2 > scd30.data.get("co2_max"): co2_max = co2
                 if temp < scd30.data.get("temp_min"): temp_min = temp
-                if temp > scd30.data.get("temp_max"): temp_max = temp               
+                if temp > scd30.data.get("temp_max"): temp_max = temp           
                 if relh < scd30.data.get("relh_min"): relh_min = relh
-                if relh > scd30.data.get("relh_max"): relh_max = relh   
+                if relh > scd30.data.get("relh_max"): relh_max = relh
             else:
-                co2_max = co2_min = co2
+                co2_max  = co2_min = co2
                 relh_max = relh_min = relh
                 temp_max = temp_min = temp
             scd30.data = {
@@ -288,7 +302,7 @@ async def runWatchdogDust(sps30, interval=2):
 # Main loop
 async def showSensorData(tft, sensor, lightstrip, interval=2):
     
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
     
     # font width, heigt for calculating coords
     font_height = tft.font_height
@@ -356,6 +370,9 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
     sps30  = False 
     bh1750 = False
     mq2    = False
+    
+    # warning text drawed
+    warning_cleared = False
     
     # set mectrics for definded sensor
     # order by line drawing
@@ -435,9 +452,9 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
         clear_width = tft.display.width - START_X - coord_x + offset_x
 
         """
-        Note: scd30
-        Line CO2
-        scoring value
+        Line: CO2
+        Sensor: scd30 
+        Scoring: value
         """
         co2  = sensor.scd30.data.get("co2")
         if co2_last != co2:
@@ -462,9 +479,9 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
             co2_last = co2
         
         """
-        NOTE: scd30
-        Line Temperature
-        scoring heatindex
+        Line: Temperature
+        Sensor: scd30
+        Scoring: heatindex
         """
         # get values
         temp  = sensor.scd30.data.get("temp")
@@ -488,8 +505,9 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
             temp_last = temp
         
         """
-        Line Humidity
-        no scoring
+        Line: Humidity
+        Sensor: scd30
+        Scoring: None
         """
         # next draw coord
         coord_y += font_height + offset_y + START_Y
@@ -507,9 +525,8 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
             hum_last = hum
         
         """
-        NOTE: bh1750
-        Line Lux
-        no scoring
+        Line: Lux
+        Sensor: bh1750
         """
         # get value
         lux = sensor.bh1750.data.get("lux")
@@ -529,8 +546,8 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
         clear_width = tft.display.width - START_X - coord_x + offset_x
         
         """
-        NOTE: scd30
-        Line CO2 min, max
+        Line: CO2 min, max
+        Sensor: scd30
         """
         # get values
         co2_max  = sensor.scd30.data.get("co2_max")
@@ -548,8 +565,8 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
             co2_min_last = co2_min
         
         """
-        NOTE: scd30
-        Line Temp min, max
+        Line: Temp min, max
+        Sensor: scd30
         """        
         # get values
         temp_max  = sensor.scd30.data.get("temp_max")
@@ -588,24 +605,28 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
         """
         # next draw coord
         coord_y += font_height + offset_y + START_Y
+        
         if co2_warning is not None:
-            if co2_warning_last != co2_warning:
+            if co2_warning_last != co2_warning or warning_cleared:
                 # clear area
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
                 # draw value
                 value = co2_warning
                 tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color(co2_score_color))
                 co2_warning_last = co2_warning
-                await asyncio.sleep(1)
+                warning_cleared = False
                 await lightstrip.cycle(color=co2_score_color)
+                lightstrip.color(color=co2_score_color)
         else:
             co2_warning_last = None
+            lightstrip.clear()
             # clear area
             tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-        
+            
         if sensor.mq2.data is not None:
             # clear area
             tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+            warning_cleared = True
             # draw value
             value = "Gas or Smoke detected"
             tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("RED"))
@@ -615,40 +636,28 @@ async def showSensorData(tft, sensor, lightstrip, interval=2):
         """
         ENDLINE slim progressbar
         """
+        # progressbar config
+        progressbar_timer = 0.3
+        rect_width, rect_range = 310, 3
+        rect_progress = rect_width // rect_range
+        rect_x, rect_y, rect_height = 5, 228, 8
+        
         # compute time difference
         refresh_time = ticks_diff(ticks_ms(), refresh_start) / 1000
         if debug: print("time to displaying {} seconds".format(refresh_time))
-        progressbar_timer = 0.3
-        rect_height = 8
-        rect_width = 103
-        rect_x = 5
-        rect_y = 228
-        rect_range = 3
         if refresh_time < interval: progressbar_timer = (interval-refresh_time) / rect_range
         if debug: print("progressbar timeout {} seconds".format(progressbar_timer))
-        outer_width = (rect_width*rect_range) + rect_x-3
+        
+        # draw progressbar
+        outer_width = (rect_progress*rect_range) + rect_x-3
         tft.display.draw_rectangle(rect_x-1, rect_y-1, outer_width, rect_height+2, tft.color("WHITE"))
         for i in range(rect_range):
-            tft.display.fill_rectangle(rect_x, rect_y, rect_width, rect_height, tft.color("GREEN"))
-            rect_x = rect_x + rect_width
+            tft.display.fill_rectangle(rect_x, rect_y, rect_progress, rect_height, tft.color("GREEN"))
+            rect_x = rect_x + rect_progress
             await asyncio.sleep(progressbar_timer)
         tft.display.fill_rectangle(4, rect_y-1, outer_width, rect_height+2, tft.color(CLEAR_COLOR))
         await asyncio.sleep(0.1)
-        
-        # big progressbar
-#         rect_range = 3
-#         rect_height = 20
-#         rect_width = 310 // rect_range
-#         rect_x = 5
-#         rect_y = 215
-#         outer_width = (rect_width*rect_range) + rect_x-3
-#         tft.display.draw_rectangle(rect_x-1, rect_y-1, outer_width, rect_height+2, tft.color("WHITE"))
-#         for i in range(rect_range):
-#             tft.display.fill_rectangle(rect_x, rect_y, rect_width, rect_height, tft.color("GREEN"))
-#             rect_x = rect_x + rect_width
-#             await asyncio.sleep(0.5)
-#         tft.display.fill_rectangle(4, 214, outer_width, rect_height+2, tft.color(CLEAR_COLOR))
-#         await asyncio.sleep(0.1)
+
 
 def waitfor_ready(interval=1):
     while state.get('ready') is not True:
@@ -668,7 +677,6 @@ def date():
 
 def timestamp():
     return mktime(localtime())
-
 
 # main
 def main():
@@ -825,7 +833,7 @@ def main():
         # border
         tft.display.draw_rectangle(START_X-offset_y, START_Y-offset_y, tft.display.width-120, tft.display.height-60, tft.color("WHITE"))    
 
-        text = "config loaded"
+        text = "config initialized"
         print(text)
         tft.display.draw_text(START_X, coord_y, text, tft.font, tft.color("GREEN"))
         
@@ -882,13 +890,14 @@ def main():
             sleep(0.4)    
         
         # show system status
-#         if debug:
-#             loop.create_task(showSystemState(tft))
-#         else:
-#             state.set('ready', True)
-        state.set('ready', True)
+        if debug:
+            loop.create_task(showSystemState(tft))
+        else:
+            state.set('ready', True)
+    
     else:
         state.set('ready', True)
+    
     
     # Watchdog loops
     if hasattr(sensor, 'scd30'):  loop.create_task(runWatchdogCO2(sensor.scd30, interval=SCD30_INTERVAL))
@@ -902,8 +911,7 @@ def main():
     
     # WIFI reconnecting loop
     reconnect = state.get('reconnect')
-    if reconnect > 0:
-        loop.create_task(runReconnect(interval=reconnect))
+    if reconnect > 0: loop.create_task(runReconnect(interval=reconnect))
     
     # Wait for state ready
     loop.run_until_complete(waitfor_ready())
@@ -920,3 +928,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('\nKeyboardInterrupt')
+

@@ -1,7 +1,6 @@
 import gc
 from app.database import Database
 
-
 # main
 print("main...")
 
@@ -31,7 +30,7 @@ def init():
     NOTE:
     Define default system params as fallback
     """
-    debug, mounted, wifi, connected, ap, timesync, rtc = False, False, False, False, False, False, False
+    debug, mounted, wifi, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False
     ip_address, ap_ip_address = "0.0.0.0", "0.0.0.0"
     reconnect, utc = 0, 0
     
@@ -66,7 +65,7 @@ def init():
         if device is not None:
             print("\n----- DEVICE -----")
             for key, value in device.items():
-                print(key + ": " + str(value))
+                print("{}: {}".format(key, value))
     """
     NOTE:
     First try to mount SDCard
@@ -78,9 +77,8 @@ def init():
         mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
     
     """
-    NOTE:
-    Smart connect - trys to connect each network saved in network.db
-    Default - connect to the default network saved in network.db or network.json
+    Smart:   trys to connect each network saved in network.db
+    Default: connect to the default network saved in network.db or network.json
     """
     if init.get("NETWORK"):
         print("\nnetwork...")
@@ -95,51 +93,51 @@ def init():
                 connect()
         if network.get("AP") or (network.get("AP_IF") and not is_connected()):
             start_ap()
-            ap = True
+            ap = network.get("AP")
+            ap_if = network.get("AP_IF")
             ip = get_ap_ip()
             if ip is not None: ap_ip_address = ip
         else:
             stop_ap()
-        
-        if is_connected():
-            connected = True
-            ip = get_ip()
-            if ip is not None: ip_address = ip
-            """
-            NOTE:
-            Declare Timezone UTC+ to set an offset for the RTC
-            """
-            from timezone import Timezone
-            timezone = boot.get("TIMEZONE")
-            utc = timezone.get("UTC")
-            if debug: print("TIMEZONE:", timezone.get("ZONE"))   
-            """
-            NOTE: Online connection neccessary
-            timeset by ntptime modul
-            """
+    
+    if wifi and is_connected():
+        connected = True
+        ip = get_ip()
+        if ip is not None: ip_address = ip
+        """
+        NOTE:
+        Declare Timezone UTC+ to set an offset for the RTC
+        """
+        from timezone import Timezone
+        timezone = boot.get("TIMEZONE")
+        utc = timezone.get("UTC")
+        if debug: print("TIMEZONE:", timezone.get("ZONE"))   
+        """
+        timeset by ntptime modul
+        """
+        try:
+            from ntptime import settime
+            settime()
+            Timezone(utc).offset()
+            timesync = True
+            print('time synchronized')
+        except Exception as e:
+            print('setting time failed')          
+        """
+        Backup:
+        timeset by online host
+        """
+        if not timesync:
             try:
-                from ntptime import settime
-                settime()
-                Timezone(utc).offset()
+                Timezone(utc).settime()
                 timesync = True
                 print('time synchronized')
             except Exception as e:
-                print('setting time failed')          
-            """
-            NOTE: Online connection neccessary
-            Backup timeset by online host
-            """
-            if not timesync:
-                try:
-                    Timezone(utc).settime()
-                    timesync = True
-                    print('time synchronized')
-                except Exception as e:
-                    print('setting time failed')
-            
-        elif boot.get("RTC"):
-                print("TODO: sync time by RTC modul...")
-                print("MODUL:", boot.get("RTC").get("MODUL"))
+                print('setting time failed')
+        
+    elif boot.get("RTC"):
+        print("TODO: sync time by RTC modul...")
+        print("MODUL:", boot.get("RTC").get("MODUL"))
     
     """
     NOTE:
@@ -155,6 +153,7 @@ def init():
     system.save("CONNECTED", connected)
     system.save("RECONNECT", reconnect)
     system.save("AP", ap)
+    system.save("AP_IF", ap_if)
     system.save("TIMESYNC", timesync)
     system.save("UTC", utc)
     system.save("RTC", rtc)
@@ -163,8 +162,7 @@ def init():
         print("\n----- SYSTEM -----")
         keys = system.keys()
         for key in keys:
-            value = system.get(key)
-            print("{}: {}".format(key, value))
+            print("{}: {}".format(key, system.get(key)))
     
     # delete database objects
     del boot

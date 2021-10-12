@@ -8,8 +8,9 @@
     },
     "LOG" : {
         "INIT"      : true
+        "INTERVAL"  : 60
         "PATH"      : "/log/"
-        "FILE"      : "data"        
+        "FILE"      : "data"  
         "MIMETYPE"  : "csv"
         "TOSDCARD"  : true
     },
