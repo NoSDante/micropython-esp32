@@ -52,7 +52,8 @@ async def runLightstripDemo(lightstrip):
     await lightstrip.bounce(color="GREEN")
 
 # WiFi loop
-async def runReconnect(interval=3600):
+async def runReconnect(interval=3600, interval_if=600, retrys=2):
+    retry = 0
     from wifi import smart_connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
     while state.get('reconnect') > 0:
         await asyncio.sleep(interval)
@@ -62,9 +63,10 @@ async def runReconnect(interval=3600):
             smart_connect()
             #connect()
             if is_connected():
-                if state.get('ap_if'):
+                if state.get('ap_if') and retry == retrys:
                     stop_ap()
                     state.set("ap_ip_address", "0.0.0.0")
+                retry = 0
                 state.set("connected", True)
                 state.set("ip_address", get_ip())
                 interval = state.get('reconnect')
@@ -81,10 +83,13 @@ async def runReconnect(interval=3600):
             else:
                 state.set("connected", False)
                 state.set("ip_address", "0.0.0.0")
-                interval = 900
-                if state.get('ap_if'):
-                    start_ap()
-                    state.set("ap_ip_address", get_ap_ip())
+                interval = interval_if
+                retry += 1
+            if retry == retrys and state.get('ap_if'):
+                start_ap()
+                state.set("ap_ip_address", get_ap_ip())
+                #interval = state.get('reconnect')
+                #state.set('reconnect', 0)
 
 # Logger loop
 async def runLogger(sensor, config):
@@ -101,7 +106,7 @@ async def runLogger(sensor, config):
         if debug: print("logging...")
         if hasattr(sensor, 'scd30'):
             print("log scd30 data")
-            print("date_to_int", date_to_int())
+            print("date_as_int", date_as_int())
         if hasattr(sensor, 'mq2'):
             print("log mq2 data")            
         if hasattr(sensor, 'bh1750'):
@@ -323,8 +328,14 @@ async def displaySystemState(tft):
 # Display loop
 async def displaySensorData(tft, sensor, lightstrip, interval=2):
     
-    nigthmode = False
     await asyncio.sleep(interval)
+    
+    # 2 mode off
+    nightmode = 2
+    
+    # init nightmode
+    # -1 mode on, state undefined
+    if app.get("nightmode"): nightmode = -1
     
     # font width, heigt for calculating coords
     font_height, font_width = tft.font_height, tft.font_width
@@ -375,7 +386,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     clear_width_x1   = tft.display.width - clear_width_x - (tft.display.width - coord_x2) - (offset_x*2) - START_X
     clear_width_x2   = tft.display.width - clear_width_x - clear_width_x1 - (offset_x*2) - START_X - BORDER_X
 
-    # time for clock
+    # clocktime, date
     now = time()[0:5]
     today = date()
     
@@ -383,8 +394,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     First line header
     """
     # draw clock time
-    text = now
-    tft.display.draw_text(START_X, START_Y, text, tft.font, tft.color(CLOCK_COLOR))
+    tft.display.draw_text(START_X, START_Y, now, tft.font, tft.color(CLOCK_COLOR))
     # draw heading
     text = "ENVIRONMENT"
     tft.display.draw_text(coord_x1, START_Y, text, tft.font, tft.color(HEADER_COLOR)) 
@@ -395,12 +405,11 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     # warning is cleared
     warning_cleared = False
     
-    # set mectrics for definded sensor
+    # set mectric for sensor
     # order by line drawing
     metrics = []
     
-    if hasattr(sensor, 'scd30'):
-        scd30 = True
+    if sensors.get('scd30'):
         # define metrics
         metrics.append('CO2')
         metrics.append('Temp.')
@@ -410,34 +419,34 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         co2_warning, co2_warning_last, co2_color_last = None, None, None
         co2_last, co2_max_last, co2_min_last = None, None, None
         temp_last, temp_max_last, temp_min_last, hum_last = None, None, None, None
-    if hasattr(sensor, 'sps30'):
+    if sensors.get('sps30'):
         sps30 = True
         # define metrics
         # init sensor values
-    if hasattr(sensor, 'bh1750'):
-        bh1750 = True
+    if sensors.get('bh1750'):
         # define metric
         metrics.append('Light.')
         # init sensor value
         lux_last = None
-    if hasattr(sensor, 'mq2'):
-        mq2 = True
+    if sensors.get('mq2'):
         mq2_warning = None
     
-    # coord-y for vertical lines
-    vline_y = coord_y    
-    # draw metrics and lines
+    # coord-y vertical lines
+    vline_y = coord_y
+    
+    # draw metrics, horizontal lines
     for metric in metrics:
         coord_y += START_Y
         tft.display.draw_text(START_X, coord_y, metric, tft.font, tft.color(ITEM_COLOR))
         # draw horizontal line
         coord_y += font_height + offset_y
         tft.display.draw_hline(0, coord_y, tft.display.width, tft.color(LINE_COLOR))
+    
     # draw vertical lines
     tft.display.draw_vline(coord_x1-offset_x, vline_y, coord_y-START_Y-font_height, tft.color(LINE_COLOR))
     tft.display.draw_vline(coord_x2-offset_x, vline_y, coord_y-START_Y-font_height, tft.color(LINE_COLOR))
     
-    # score sensor values
+    # score sensor value
     scoring = Scoring()
     
     while 1:
@@ -446,9 +455,9 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         
         clock = time()[0:5]
         
-        if app.get("nightmode"):
-            if clock == app.get("nightstart"): nigthmode = True
-            if clock == app.get("nightend"): nigthmode = False
+        if app.get("nightmode") or nightmode < 0:
+            if clock == app.get("nightstart"): nightmode = 1
+            if clock == app.get("nightend"): nightmode = 0
         
         """
         Line header
@@ -479,59 +488,69 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         Coords:  x1, x2 
         Scoring: value
         """
-        co2  = sensor.scd30.data.get("co2")
-        if co2_last != co2:
-            # scoring value
-            score = scoring.co2(co2)
-            color = scoring.color(score)
-            value = "{} ppm".format(co2)
-            if co2 >= CO2_WARNING_VALUE:
-                co2_warning = "CO2 score is {}".format(score)
-                co2_score_color = color
-            else:
-                co2_score_color = VALUE_COLOR
-                co2_warning = None
-            # clear area x1
-            tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
-            # draw x1 value
-            tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(co2_score_color))
-            # save as last value
-            co2_last = co2
-        if co2_color_last != color:
-            # clear area x2
-            #tft.display.fill_rectangle(coord_x2-offset_x+BORDER_X, coord_y-offset_y+BORDER_Y, clear_width_x2+START_X-BORDER_X*2, font_height+START_Y+BORDER_Y, tft.color(CLEAR_COLOR))            
-            # draw x2 score color
-            tft.display.fill_rectangle(coord_x2-offset_x+BORDER_X, coord_y-offset_y+BORDER_Y, clear_width_x2+START_X-BORDER_X*2, font_height+START_Y+BORDER_Y, tft.color(color))
-            # save as last value
-            co2_color_last = color
+        if sensors.get('scd30'):
+            co2  = sensor.scd30.data.get("co2")
+            if co2_last != co2:
+                # scoring value
+                score = scoring.co2(co2)
+                color = scoring.color(score)
+                value = "{} ppm".format(co2)
+                if co2 >= CO2_WARNING_VALUE:
+                    co2_warning = "CO2 score is {}".format(score)
+                    co2_score_color = color
+                else:
+                    co2_score_color = VALUE_COLOR
+                    co2_warning = None
+                # clear area x1
+                tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
+                # draw x1 value
+                tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(co2_score_color))
+                # save as last value
+                co2_last = co2
+            if co2_color_last != color:
+                # clear area x2
+                #tft.display.fill_rectangle(coord_x2-offset_x+BORDER_X, coord_y-offset_y+BORDER_Y, clear_width_x2+START_X-BORDER_X*2, font_height+START_Y+BORDER_Y, tft.color(CLEAR_COLOR))            
+                # draw x2 score color
+                tft.display.fill_rectangle(coord_x2-offset_x+BORDER_X, coord_y-offset_y+BORDER_Y, clear_width_x2+START_X-BORDER_X*2, font_height+START_Y+BORDER_Y, tft.color(color))
+                # save as last value
+                co2_color_last = color
 
         """scd30
         Area:    Temperature
         Coords:  x1
         Scoring: heatindex
         """
-        # get sensor values
-        temp  = sensor.scd30.data.get("temp")
-        hum = sensor.scd30.data.get("relh")
         # next draw coord-y
         coord_y += font_height + offset_y + START_Y
-        if temp_last != temp:
-            # scoring
-            value = "{} C".format(str(temp).replace(".", ","))
-            # clear x1 area
-            tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
-            # draw x1 value
-            tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
-            # scoring heatindex or temperature
-            hi, score = scoring.heatindex(temp, hum)
-            if hi is None: score = scoring.temperature(temp)
-            color = scoring.color(score)
-            # clear x2 area
-            #tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
-            # draw scoring
-            #tft.display.draw_text(coord_x2, coord_y, score, tft.font, tft.color(color))
-            # save as last value
-            temp_last = temp
+        if sensors.get('scd30'):
+            # get sensor values
+            temp  = sensor.scd30.data.get("temp")
+            hum = sensor.scd30.data.get("relh")        
+            if temp_last != temp:
+                color = ITEM_COLOR
+                value = "{} C".format(str(temp).replace(".", ","))
+                # clear x1 area
+                tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
+                # draw x1 value
+                tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
+                # scoring heatindex or temperature
+                hi, score = scoring.heatindex(temp, hum)
+                if hi is None:
+                    # calc difference          
+                    temp_diff = temp - temp_last if temp_last is not None else 0
+                    temp_diff = round(temp_diff, 1)
+                    if temp_diff >= 0: value = "+{}".format(str(temp_diff).replace(".", ","))
+                    else: value = "{}".format(str(temp_diff).replace(".", ","))
+                else:
+                    color = scoring.color(score)
+                    value = "HI {} C".format(str(hi).replace(".", ","))
+                    hi_warning = "Heatindex is {}".format(score)
+                    hi_score_color = color
+                # draw difference or hi
+                tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
+                tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(ITEM_COLOR))
+                # save as last value
+                temp_last = temp
         
         """scd30
         Area:   Humidity
@@ -539,90 +558,94 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         """
         # next draw coord
         coord_y += font_height + offset_y + START_Y
-        if hum_last != hum:
-            score = scoring.humidity(hum)
-            color = scoring.color(score)
-            value = "{} %".format(str(hum))
-            # clear area
-            tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
-            # draw value
-            tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
-            # draw difference          
-            hum_diff = hum - hum_last if hum_last is not None else 0
-            if hum_diff >= 0: value = "+{} %".format(hum_diff)
-            else: value = "{} %".format(hum_diff)
-            tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
-            tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(ITEM_COLOR))  
-            # save as last value
-            hum_last = hum
+        if sensors.get('scd30'):
+            if hum_last != hum:
+                score = scoring.humidity(hum)
+                color = scoring.color(score)
+                value = "{} %".format(str(hum))
+                # clear area
+                tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
+                # draw value
+                tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
+                # draw difference          
+                hum_diff = hum - hum_last if hum_last is not None else 0
+                if hum_diff >= 0: value = "+{}".format(hum_diff)
+                else: value = "{}".format(hum_diff)
+                tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
+                tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(ITEM_COLOR))  
+                # save as last value
+                hum_last = hum
         
         """bh1750
         Area: Lux
         Coords: x1
         """
-        # get sensor values
-        lux = sensor.bh1750.data.get("lux")
         # next draw coord
         coord_y += font_height + offset_y + START_Y
-        if lux_last != lux:
-            # clear area
-            tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
-            # draw value
-            value = "{} lux".format(str(lux).replace(".", ","))
-            tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
-            # draw difference          
-            lux_diff = lux - lux_last if lux_last is not None else 0
-            lux_diff = round(lux_diff,1)
-            if lux_diff >= 0: value = "+{} lux".format(str(lux_diff).replace(".", ","))
-            else: value = "{} lux".format(str(lux_diff).replace(".", ","))
-            tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
-            tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(ITEM_COLOR)) 
-            # save as last value
-            lux_last = lux
+        if sensors.get('bh1750'):
+            # get sensor values
+            lux = sensor.bh1750.data.get("lux")        
+            if lux_last != lux:
+                # clear area
+                tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
+                # draw value
+                value = "{} lux".format(str(lux).replace(".", ","))
+                tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
+                # draw difference          
+                lux_diff = lux - lux_last if lux_last is not None else 0
+                lux_diff = round(lux_diff,1)
+                if lux_diff >= 0: value = "+{}".format(str(lux_diff).replace(".", ","))
+                else: value = "{}".format(str(lux_diff).replace(".", ","))
+                tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
+                tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(ITEM_COLOR)) 
+                # save as last value
+                lux_last = lux
         
         """scd30
         Line:  CO2 min, max
         Coord: x
         """
-        # get values
-        co2_max  = sensor.scd30.data.get("co2_max")
-        co2_min  = sensor.scd30.data.get("co2_min")
         # next draw coord
-        coord_y += font_height + offset_y + START_Y        
-        if co2_max_last != co2_max or co2_min_last != co2_min:
-            # clear area
-            tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-            # draw value
-            value = "CO2 min. {} - max. {}".format(co2_min, co2_max)
-            tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("GRAY"))
-            # draw horizontal line
-            line_y = coord_y + font_height + offset_y
-            tft.display.draw_hline(0, line_y, tft.display.width, tft.color(LINE_COLOR))
-            # save as last value
-            co2_max_last = co2_max
-            co2_min_last = co2_min
+        coord_y += font_height + offset_y + START_Y
+        if sensors.get('scd30'):     
+            # get values
+            co2_max  = sensor.scd30.data.get("co2_max")
+            co2_min  = sensor.scd30.data.get("co2_min")    
+            if co2_max_last != co2_max or co2_min_last != co2_min:
+                # clear area
+                tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+                # draw value
+                value = "CO2 min. {} - max. {}".format(co2_min, co2_max)
+                tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("GRAY"))
+                # draw horizontal line
+                line_y = coord_y + font_height + offset_y
+                tft.display.draw_hline(0, line_y, tft.display.width, tft.color(LINE_COLOR))
+                # save as last value
+                co2_max_last = co2_max
+                co2_min_last = co2_min
         
         """scd30
         Line:  Temp min, max
         Coord: x
-        """        
-        # get values
-        temp_max  = sensor.scd30.data.get("temp_max")
-        temp_min  = sensor.scd30.data.get("temp_min")
+        """
         # next draw coord
-        coord_y += font_height + offset_y + START_Y        
-        if temp_max_last != temp_max or temp_min_last != temp_min:
-            # clear area
-            tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-            # draw value
-            value = "Temp. min. {} - max. {}".format(str(temp_min).replace(".", ","), str(temp_max).replace(".", ","))
-            tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("GRAY"))
-            # draw horizontal line
-            line_y = coord_y + font_height + offset_y
-            tft.display.draw_hline(0, line_y, tft.display.width, tft.color(LINE_COLOR))            
-            # save as last value
-            temp_max_last = temp_max
-            temp_min_last = temp_min
+        coord_y += font_height + offset_y + START_Y  
+        if sensors.get('scd30'):
+            # get values
+            temp_max  = sensor.scd30.data.get("temp_max")
+            temp_min  = sensor.scd30.data.get("temp_min")
+            if temp_max_last != temp_max or temp_min_last != temp_min:
+                # clear area
+                tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+                # draw value
+                value = "Temp. min. {} - max. {}".format(str(temp_min).replace(".", ","), str(temp_max).replace(".", ","))
+                tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("GRAY"))
+                # draw horizontal line
+                line_y = coord_y + font_height + offset_y
+                tft.display.draw_hline(0, line_y, tft.display.width, tft.color(LINE_COLOR))            
+                # save as last value
+                temp_max_last = temp_max
+                temp_min_last = temp_min
         
         """
         Line:  Warnings (last line)
@@ -631,32 +654,35 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         # next draw coord
         coord_y += font_height + offset_y + START_Y
         
-        if sensor.mq2.data is not None:
-            # clear area
-            tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-            warning_cleared = True
-            # draw value
-            value = "Gas or Smoke detected"
-            tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("RED"))
-            sensor.mq2.data = None
-            await lightstrip.fade()       
-        
-        if co2_warning is not None:
-            if co2_warning_last != co2_warning or warning_cleared:
+        if sensors.get('mq2'):
+            if sensor.mq2.data is not None:
                 # clear area
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+                warning_cleared = True
                 # draw value
-                value = co2_warning
-                tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color(co2_score_color))
-                co2_warning_last = co2_warning
-                warning_cleared = False
-                await lightstrip.cycle(color=co2_score_color)
-                lightstrip.color(color=co2_score_color)
-        else:
-            co2_warning_last = None
-            lightstrip.clear()
-            # clear area
-            tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+                value = "Gas or Smoke detected"
+                tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("RED"))
+                sensor.mq2.data = None
+                if nightmode != 1: await lightstrip.fade()
+                else: lightstrip.cycle(color="RED", times=2)
+        
+        if sensors.get('scd30'):
+            if co2_warning is not None:
+                if co2_warning_last != co2_warning or warning_cleared:
+                    # clear area
+                    tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+                    # draw value
+                    value = co2_warning
+                    tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color(co2_score_color))
+                    co2_warning_last = co2_warning
+                    warning_cleared = False
+                    await lightstrip.cycle(color=co2_score_color)
+                    if nightmode != 1: lightstrip.color(color=co2_score_color)
+            else:
+                co2_warning_last = None
+                lightstrip.clear()
+                # clear area
+                tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
                
         """
         END slim progressbar
@@ -684,11 +710,11 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         await asyncio.sleep(out_time)
 
 # Ready loop
-def waitfor_ready(interval=1):
+async def waitfor_ready(interval=1):
     while app.get('ready') is not True:
         await asyncio.sleep(interval)
 
-def wait(sec):
+async def wait(sec):
     await asyncio.sleep(sec)
 
 def time():
@@ -699,7 +725,7 @@ def date():
     t = localtime()
     return "{:02d}.{:02d}.{}".format(t[2], t[1], t[0])
 
-def date_to_int():
+def date_as_int():
     t = localtime()
     return "{}{:02d}{:02d}".format(t[0], t[1], t[2])
 
@@ -742,10 +768,10 @@ def main():
     LIGHTSTRIP_PIXEL    = config.get("LIGHTSTRIP").get("PIXEL")    # Number of pixels
     
     # NIGHTMODE
-    if config.get("NIGTHMODE").get("INIT"):
-        app.set("nigthmode", True)
-        app.set("nigthstart", config.get("NIGTHMODE").get("NIGHT_START"))
-        app.set("nigthend", config.get("NIGTHMODE").get("NIGHT_END"))
+    if config.get("NIGHTMODE").get("INIT"):
+        app.set("nightmode", True)
+        app.set("nightstart", config.get("NIGHTMODE").get("NIGHT_START"))
+        app.set("nightend",   config.get("NIGHTMODE").get("NIGHT_END"))
     
     # SPS30
     SPS30_INIT     = config.get("SPS30").get("INIT")     # use sensor 
@@ -790,8 +816,8 @@ def main():
     FONT_WIDTH  = config.get("FONT").get("WIDTH")
     FONT_HEIGHT = config.get("FONT").get("HEIGHT")
     
-    # LOG CONFIG
-    LOG_CONFIG = config.get("LOG")
+    # LOGGER CONFIG
+    LOGGER_CONFIG = config.get("LOG")
        
     del config
     
@@ -946,11 +972,11 @@ def main():
         loop.create_task(runWatchdogGas(sensor.mq2, interval=MQ2_INTERVAL))
         
     # WiFi loop
-    if state.get('reconnect') > 0: loop.create_task(runReconnect(interval=state.get('reconnect')))
+    if state.get('reconnect') > 0: loop.create_task(runReconnect(state.get('reconnect'), 600, 2))
     
     # Logger loop
-    if LOG_CONFIG.get("INIT"): loop.create_task(runLogger(sensor, LOG_CONFIG))
-    del LOG_CONFIG
+    if LOGGER_CONFIG.get("INIT"): loop.create_task(runLogger(sensor, LOGGER_CONFIG))
+    del LOGGER_CONFIG
     
     # Wait for state ready
     loop.run_until_complete(waitfor_ready())

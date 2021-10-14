@@ -227,38 +227,36 @@ class Sensors():
 class Scoring(object):
         
     def co2(self, value):
-        status = "UNKNOWN"
-        if value is None: return status
+        score = None
+        if value is None: return score
         if value in range(0, 600):
-            status = "EXCELLENT"
+            score = "GREAT"
         if value in range(600, 800):
-            status = "GOOD"
+            score = "GOOD"
         if value in range(800, 1000):
-            status = "NORMAL"
+            score = "NORMAL"
         if value in range(1000, 1200):
-            status = "BAD"
+            score = "BAD"
         if value in range(1200, 1600):
-            status = "VERY BAD"
-        if value in range(1600, 2100):
-            status = "CRITICAL"    
-        if value >= 2100:
-            status = "DANGER"
-        return status
+            score = "VERY BAD"
+        if value in range(1600, 2000):
+            score = "CRITICAL"    
+        if value >= 2000:
+            score = "DANGER"
+        return score
     
     def temperature(self, value):
-        status = ""
-        if value is None: return status
+        score = None
+        if value is None: return score
         if value <= 0:
-            status = "FREEZE"
-        return status
+            score = "FREEZE"
+        return score
     
     def heatindex(self, temp, hum):
-        status = "UNKNOWN"
-        if temp is None or hum is None:
-            return temp, status
-        # Convert celius to fahrenheit (heat-index is only fahrenheit compatible)
+        if temp is None or hum is None: return temp, status
+        # Convert celcius to fahrenheit
         fahrenheit = ((temp * 9/5) + 32)
-        hi = None
+        hi, score = None, None
         if fahrenheit >= 80 and hum >= 40:
             # Creating multiples of 'fahrenheit' & 'hum' values for the coefficients
             T2 = pow(fahrenheit, 2)
@@ -273,31 +271,32 @@ class Scoring(object):
             heatindex1 = C1[0] + (C1[1] * fahrenheit) + (C1[2] * hum) + (C1[3] * fahrenheit * hum) + (C1[4] * T2) + (C1[5] * H2) + (C1[6] * T2 * hum) + (C1[7] * fahrenheit * H2) + (C1[8] * T2 * H2)
             heatindex2 = C2[0] + (C2[1] * fahrenheit) + (C2[2] * hum) + (C2[3] * fahrenheit * hum) + (C2[4] * T2) + (C2[5] * H2) + (C2[6] * T2 * hum) + (C2[7] * fahrenheit * H2) + (C2[8] * T2 * H2)
             heatindex3 = C3[0] + (C3[1] * fahrenheit) + (C3[2] * hum) + (C3[3] * fahrenheit * hum) + (C3[4] * T2) + (C3[5] * H2) + (C3[6] * T2 * hum) + (C3[7] * fahrenheit * H2) + (C3[8] * T2 * H2) + (C3[9] * T3) + (C3[10] * H3) + (C3[11] * T3 * hum) + (C3[12] * fahrenheit * H3) + (C3[13] * T3 * H2) + (C3[14] * T2 * H3) + (C3[15] * T3 * H3)
-            hi = round(((((heatindex1+heatindex2+heatindex3)//3) - 32) * 5/9), 0)
-            hi = int(hi)
-        # scoring state
+            hi = round(((((heatindex1+heatindex2+heatindex3)//3) - 32) * 5/9), 1)
+        # score
         if hi:
             if hi in range(27, 32):
-                status = "CAUTION"
+                score = "CAUTION"
             if hi in range(32, 41):
-                status = "CRITCAL"
+                score = "CRITCAL"
             if hi in range(41, 54):
-                status = "DANGER"
+                score = "DANGER"
             if hi >= 54:
-                status = "EXTREME"               
-        return hi, status
+                score = "EXTREME"               
+        return hi, score
     
     def humidity(self, value):
-        status = ""
-        return status
+        score = None
+        return score
     
     def dust(self, value):
-        status = ""
-        return status
+        score = None
+        return score
     
     def color(self, value):
+        default = "DEFAULT"
         colors = {
                 "EXCELLENT" : ("GREEN"),
+                "GREAT"     : ("GREEN"),
                 "GOOD"      : ("LIME"),
                 "NORMAL"    : ("YELLOW GREEN"),
                 "BAD"       : ("YELLOW"),
@@ -312,11 +311,9 @@ class Scoring(object):
                 "COLD"      : ("MEDIUM BLUE"),
                 "FREEZE"    : ("BLUE"),
                 "DEFAULT"   : ("WHITE"),          
-                "UNKNOWN"   : ("ORANGE RED"),
-                ""          : ("WHITE")
-        }
-        if value in colors:
-            return colors[value]
-        else:
-            print("status does not exist")
-            return colors["DEFAULT"]
+                "UNKNOWN"   : ("ORANGE RED")
+            }
+        if not value in colors:
+            print("score color '{}' does not exist".format(value))
+            value = default
+        return colors[value]

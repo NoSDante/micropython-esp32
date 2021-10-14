@@ -19,8 +19,8 @@
         "PIXEL"    : 8
         "DATA_PIN" : 27
     },
-    "NIGTHMODE": {
-        "INIT"     : false
+    "NIGHTMODE": {
+        "INIT"     : true
         "START"    : "00:00"
         "END"      : "06:00"
     }    
