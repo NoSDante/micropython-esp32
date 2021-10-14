@@ -5,64 +5,63 @@ from time import sleep_ms
 
 class Lightstrip():
     
+    class PixelRangeException(Exception):
+        pass
+    
     def __init__(self, pin_neo=None, pixel=None):
         self.neopixel = NeoPixel(pin_neo, pixel)
-        if pixel is None:
-            self.n = self.neopixel.n
-        else:
-            self.n = pixel
+        self.n = pixel if not pixel else self.neopixel.n
+        if self.n not in range(0, self.neopixel.n): self.n = self.neopixel.n     
+        self.clear()
     
-    # light all pixels
+    # light all
     def color(self, color="WHITE"):
-        for i in range(self.n):
-            self.neopixel[i] = (self.rgb(color))
+        for i in range(self.n): self.neopixel[i] = (self.rgb(color))
+        self.neopixel.write()
+        
+    # light one
+    def pixel(self, pixel, color="WHITE"):
+        if pixel not in range(0, self.n): raise self.PixelRangeException("pixel is out of range")
+        self.neopixel[pixel] = (self.rgb(color))
         self.neopixel.write()
     
+    # light each
     def each(self, each, color="WHITE", clear=True):
         for i in range(self.n):
-            if ((i+each) % 2) == 0:
-                self.neopixel[i] = (self.rgb(color))
+            if ((i+each) % 2) == 0: self.neopixel[i] = (self.rgb(color))
         self.neopixel.write()
         if clear: self.clear()
     
-    # bounce    
+    # bounce all
     def bounce(self, color="WHITE", wait=120, clear=True):
         for i in range(4 * self.n):
-            for j in range(self.n):
-                self.neopixel[j] = (self.rgb(color))
-            if (i // self.n) % 2 == 0:
-                self.neopixel[i % self.n] = (0, 0, 0)
-            else:
-                self.neopixel[self.n - 1 - (i % self.n)] = (0, 0, 0)
+            for j in range(self.n): self.neopixel[j] = (self.rgb(color))
+            if (i // self.n) % 2 == 0: self.neopixel[i % self.n] = (0, 0, 0)
+            else: self.neopixel[self.n - 1 - (i % self.n)] = (0, 0, 0)
             self.neopixel.write()
             await asyncio.sleep_ms(wait)
         if clear: self.clear()
     
-    # clear all pixels
+    # clear pixels
     def clear(self):
-        for i in range(self.n):
-            self.neopixel[i] = (0, 0, 0)
+        for i in range(self.n): self.neopixel[i] = (0, 0, 0)
         self.neopixel.write()
     
     # fade in/out    
     async def fade(self, wait=60, clear=True):
-        
         for i in range(0, 4 * 256, 8):
             for j in range(self.n):
-                if (i // 256) % 2 == 0:
-                    val = i & 0xff
-                else:
-                    val = 255 - (i & 0xff)
+                if (i // 256) % 2 == 0: val = i & 0xff
+                else: val = 255 - (i & 0xff)
                 self.neopixel[j] = (val, 0, 0)
             self.neopixel.write()
         await asyncio.sleep_ms(wait)
         if clear: self.clear()
     
-    # cycle
+    # cycle rtl
     async def cycle(self, color="WHITE", times=1, wait=60, clear=True):
         for i in range(times * self.n):
-            for j in range(self.n):
-                 self.neopixel[j] = (0, 0, 0)
+            for j in range(self.n): self.neopixel[j] = (0, 0, 0)
             self.neopixel[i % self.n] = (self.rgb(color))
             self.neopixel.write()
             await asyncio.sleep_ms(wait)
