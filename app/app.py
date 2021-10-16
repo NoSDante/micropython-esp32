@@ -42,7 +42,7 @@ sensors = Store(
 
 # Lightstrip Demo
 async def runLightstripDemo(lightstrip):
-    while app.get('ready') is not True:
+    while not app.get('ready'):
         lightstrip.each( 1, color="DARK ORANGE", clear=False)
         await asyncio.sleep(0.5)
         lightstrip.clear()
@@ -330,13 +330,16 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     
     await asyncio.sleep(interval)
     
-    # 2 mode off
+    # nightmode 2 = off
     nightmode = 2
     
     # init nightmode
     # -1 mode on, state undefined
     if app.get("nightmode"): nightmode = -1
-    
+    # TODO: is now between nightstart, nightend
+    # 1 = on, 0 = off
+    # nightmode = 1
+        
     # font width, heigt for calculating coords
     font_height, font_width = tft.font_height, tft.font_width
     
@@ -344,10 +347,22 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     border = True
     border_px = 0
     
+    # progressbar setting
+    out_time = 0.3
+    rect_width, rect_range = 310, 3
+    progressbar_time = interval / rect_range
+    rect_progress = rect_width // rect_range
+    rect_x, rect_y, rect_height = 5, 228, 8
+    rect_bar_x = rect_x
+    outer_width = rect_width + rect_x - 3
+        
     # color setting
     BORDER_COLOR = ITEM_COLOR = LINE_COLOR = "WHITE"
     VALUE_COLOR, CLOCK_COLOR, HEADER_COLOR, CLEAR_COLOR  = "CYAN", "YELLOW", "BLUE", "BLACK"
 
+    # adjustable coords for text to line distance
+    offset_y, offset_x = 2, 6
+    
     # clearing
     tft.display.clear()
     
@@ -358,9 +373,6 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     
     # const 1px border
     BORDER_Y = BORDER_X = border_px
-    
-    # adjustable coords
-    offset_y, offset_x = 2, 6
     
     # start coords draw text
     START_X = BORDER_X + offset_x
@@ -408,6 +420,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     # set mectric for sensor
     # order by line drawing
     metrics = []
+    max_metrics = 4
     
     if sensors.get('scd30'):
         # define metrics
@@ -431,6 +444,9 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     if sensors.get('mq2'):
         mq2_warning = None
     
+    if len(metrics) > max_metrics:
+        raise Exception("invalid sensor config: too many metrics set ({}/{})".format(len(metrics), max_metrics))
+    
     # coord-y vertical lines
     vline_y = coord_y
     
@@ -449,23 +465,33 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     # score sensor value
     scoring = Scoring()
     
+    # reset values max, min
+    reset_time = "02:52"
+    reset_done = False
+    reset = False
+    
     while 1:
         # counter to calculate restinterval
         refresh_start = ticks_ms()
         
-        clock = time()[0:5]
+        # clocktime init value
+        clocktime = time()[0:5]
         
         if app.get("nightmode") or nightmode < 0:
-            if clock == app.get("nightstart"): nightmode = 1
-            if clock == app.get("nightend"): nightmode = 0
+            if clocktime == app.get("nightstart"): nightmode = 1
+            if clocktime == app.get("nightend"):   nightmode = 0
         
+        if clocktime == reset_time and reset_done is not True: reset = True
+                    
         """
         Line header
         Refresh clocktime
         Refresh network state
         """
-        if now != clock:
-            now = clock
+        line = 0
+        if now != clocktime:
+            reset_done = False
+            now = clocktime
             tft.display.fill_rectangle(START_X, START_Y, clear_width_x, font_height, tft.color(CLEAR_COLOR))
             tft.display.draw_text(START_X, START_Y, now, tft.font, tft.color(CLOCK_COLOR))
         color = "GREEN"
@@ -473,7 +499,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         if not state.get('connected'): color = "DARK ORANGE"
         if state.get('ap'):
             text = "AP"
-            color = "MEDIUM BLUE"
+            color = "DEEP SKY BLUE"
         tft.display.fill_rectangle(netstate_coord_x, START_Y, tft.display.width-netstate_coord_x-offset_x, font_height, tft.color(CLEAR_COLOR))
         tft.display.draw_text(netstate_coord_x, START_Y, text, tft.font, tft.color(color))
         
@@ -481,6 +507,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         NOTE:
         reset coord-y to draw first value (after headline)
         """
+        line = 1
         coord_y = START_Y + font_height + offset_y
         
         """scd30
@@ -490,10 +517,11 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         """
         if sensors.get('scd30'):
             co2  = sensor.scd30.data.get("co2")
+            color = co2_color_last
             if co2_last != co2:
                 # scoring value
                 score = scoring.co2(co2)
-                color = scoring.color(score)
+                color = scoring.color(score)                
                 value = "{} ppm".format(co2)
                 if co2 >= CO2_WARNING_VALUE:
                     co2_warning = "CO2 score is {}".format(score)
@@ -508,8 +536,6 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 # save as last value
                 co2_last = co2
             if co2_color_last != color:
-                # clear area x2
-                #tft.display.fill_rectangle(coord_x2-offset_x+BORDER_X, coord_y-offset_y+BORDER_Y, clear_width_x2+START_X-BORDER_X*2, font_height+START_Y+BORDER_Y, tft.color(CLEAR_COLOR))            
                 # draw x2 score color
                 tft.display.fill_rectangle(coord_x2-offset_x+BORDER_X, coord_y-offset_y+BORDER_Y, clear_width_x2+START_X-BORDER_X*2, font_height+START_Y+BORDER_Y, tft.color(color))
                 # save as last value
@@ -521,6 +547,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         Scoring: heatindex
         """
         # next draw coord-y
+        line += 1
         coord_y += font_height + offset_y + START_Y
         if sensors.get('scd30'):
             # get sensor values
@@ -557,6 +584,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         Coords: x1
         """
         # next draw coord
+        line += 1
         coord_y += font_height + offset_y + START_Y
         if sensors.get('scd30'):
             if hum_last != hum:
@@ -581,6 +609,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         Coords: x1
         """
         # next draw coord
+        line += 1
         coord_y += font_height + offset_y + START_Y
         if sensors.get('bh1750'):
             # get sensor values
@@ -606,6 +635,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         Coord: x
         """
         # next draw coord
+        line += 1
         coord_y += font_height + offset_y + START_Y
         if sensors.get('scd30'):     
             # get values
@@ -623,12 +653,15 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 # save as last value
                 co2_max_last = co2_max
                 co2_min_last = co2_min
+                # reset max
+                if reset: co2_max_last = co2_min_last
         
         """scd30
         Line:  Temp min, max
         Coord: x
         """
         # next draw coord
+        line += 1
         coord_y += font_height + offset_y + START_Y  
         if sensors.get('scd30'):
             # get values
@@ -646,14 +679,20 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 # save as last value
                 temp_max_last = temp_max
                 temp_min_last = temp_min
+                # reset min, max
+                if reset:
+                    temp_max_last = None
+                    temp_min_last = None
         
         """
         Line:  Warnings (last line)
         Coord: x
         """
         # next draw coord
+        line += 1
         coord_y += font_height + offset_y + START_Y
         
+        # gas or smoke warning
         if sensors.get('mq2'):
             if sensor.mq2.data is not None:
                 # clear area
@@ -666,6 +705,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 if nightmode != 1: await lightstrip.fade()
                 else: lightstrip.cycle(color="RED", times=2)
         
+        # co2 warning
         if sensors.get('scd30'):
             if co2_warning is not None:
                 if co2_warning_last != co2_warning or warning_cleared:
@@ -685,16 +725,14 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
                
         """
-        END slim progressbar
+        END: progressbar
         """
-        # progressbar config
-        out_time = 0.3
-        rect_width, rect_range = 310, 3
+        # reset init
         progressbar_time = interval / rect_range
-        rect_progress = rect_width // rect_range
-        rect_x, rect_y, rect_height = 5, 228, 8
         rect_bar_x = rect_x
-        outer_width = rect_width + rect_x - 3
+        if reset: reset_done = True
+        reset = False
+        
         # draw progressbar
         tft.display.draw_rectangle(rect_x-BORDER_X, rect_y-BORDER_Y, outer_width, rect_height+2, tft.color("WHITE"))
         # compute time difference
@@ -735,6 +773,7 @@ def timestamp():
 
 # main
 def main():
+    app.set('ready', False)
     
     print("\nloading config...")
     

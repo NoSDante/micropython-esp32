@@ -1,4 +1,5 @@
-import machine, time
+from machine import RTC
+from time import gmtime, mktime
     
 class Timezone():
 
@@ -29,13 +30,13 @@ class Timezone():
     def offset(self):
         # UTC+2 Mitteleuropäische Sommerzeit
         TZ_OFFSET = 3600 * self.utc
-        t = time.mktime(time.localtime())
+        t = mktime(time.localtime())
         t = t + TZ_OFFSET
-        tm = time.gmtime(t)
-        machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+        tm = gmtime(t)
+        RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
     
     def settime(self):
         TZ_OFFSET = 3600 * self.utc
         t = self.gettime() - self.NTP_DELTA + TZ_OFFSET
-        tm = time.gmtime(t)
-        machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+        tm = gmtime(t)
+        RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))

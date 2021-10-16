@@ -33,7 +33,7 @@ class Lightstrip():
         if clear: self.clear()
     
     # bounce all
-    def bounce(self, color="WHITE", wait=120, clear=True):
+    async def bounce(self, color="WHITE", wait=120, clear=True):
         for i in range(4 * self.n):
             for j in range(self.n): self.neopixel[j] = (self.rgb(color))
             if (i // self.n) % 2 == 0: self.neopixel[i % self.n] = (0, 0, 0)
