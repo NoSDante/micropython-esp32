@@ -1,5 +1,5 @@
 # This file is executed on every boot (including wake-boot from deepsleep)
-import os
+from os import listdir
 
 # boot
 print('boot...')
@@ -8,7 +8,7 @@ def no_debug():
     import esp
     esp.osdebug(None)
     
-if not "boot.db" in os.listdir():
+if not "boot.db" in listdir():
     print('setup...')
     try:
         from setup import setup

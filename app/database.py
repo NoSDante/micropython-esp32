@@ -1,4 +1,5 @@
-import json, btree, os
+import btree, json
+
 
 class Database():
     
@@ -14,21 +15,29 @@ class Database():
         self.database = database
         self.pagesize = pagesize
         self._open()
-
+        
     def _open(self):
+        """
+        Open or make db-file
+        """
         try:
             self.file = open(self.database, "r+b")
         except OSError:
             if self.create: self.file = open(self.database, "w+b")
-            else: raise self.NotFoundException("database does not exist")
-        # Open a database itself
+            else: raise self.NotFoundException("database '{}' does not exist".format(self.database))
         self.btree = btree.open(self.file, pagesize=self.pagesize)
 
     def _close(self):
+        """
+        Close db-file and btree
+        """
         self.file.close()
         self.btree.close()
 
     def keys(self):
+        """
+        Return keys
+        """
         if self.btree is None: raise self.NotDefinedException("database undefined")
         self._open()
         keys = []
@@ -37,6 +46,9 @@ class Database():
         return keys
 
     def get(self, key, default=None, as_json=True):
+        """
+        Get value by key
+        """
         if self.btree is None: raise self.NotDefinedException("database undefined")
         if isinstance(key, str): key = key.encode('utf8')
         self._open()    
@@ -49,6 +61,9 @@ class Database():
         return value
 
     def save(self, key, value):
+        """
+        Save value by key
+        """
         if self.btree is None: raise self.NotDefinedException("database undefined")
         self._open()
         self.btree[self.encode(key)] = self.encode(value)
@@ -70,7 +85,8 @@ class Database():
         """
         Delete db-file
         """
-        os.remove(self.database)
+        from os import remove
+        remove(self.database)
         self.btree = None
         
     def clear(self):
@@ -89,9 +105,12 @@ class Database():
             self.save(key, value)
 
     def encode(self, value):
-        if isinstance(value, str): value = value.encode('utf8')
+        """
+        Encoding value
+        """
+        if   isinstance(value, str):  value = value.encode('utf8')
         elif isinstance(value, bool): value = str(value).lower()
-        elif isinstance(value, int): value = str(value)
+        elif isinstance(value, int):  value = str(value)
         elif isinstance(value, dict): value = json.dumps(value).encode('utf8')
         return value
 
@@ -100,11 +119,8 @@ class Database():
         Get data from JSON-File
         """
         if len(file) == 0: raise ValueError('filename undefined')
-        import os
-        if not file in (os.listdir(path)):
-            raise self.NotFoundException("file does not exist")
+        from os import listdir
+        if not file in (listdir(path)): raise self.NotFoundException("file '{}' does not exist".format(file))
         file = path + file
-        with open(file) as json_file:
-            json_data = json.load(json_file)
-        json_file.close()
+        with open(file) as json_file: json_data = json.load(json_file)
         return json_data

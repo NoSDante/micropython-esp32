@@ -13,22 +13,31 @@ def init():
     SYSTEM_DATABASE = "/system.db"
     
     """
-    Initialize db-tree class
     Get init params from boot db-file
+    Set default params as fallback
     """
-    boot = Database(BOOT_DATABASE)
-    init = boot.get("BOOT")
+    try:
+        boot = Database(BOOT_DATABASE)
+        init = boot.get("BOOT")
+    except:
+        print("boot config missing")
+        init = {
+            "DEBUG": False,
+            "NETWORK": True,
+            "SDCARD": False,
+            "BLUETOOTH": False
+        }
+        boot = {
+            "NETWORK":
+            {
+                "WIFI": False,
+                "AP_IF": False,
+                "AP": True
+            }
+        }
     
     """
-    NOTE:
-    Cannot initialize the system without config
-    """
-    if init is None:
-        raise RuntimeError("boot config missing")
-    
-    """
-    NOTE:
-    Define default system params as fallback
+    Default system params as fallback
     """
     debug, mounted, wifi, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False
     ip_address, ap_ip_address = "0.0.0.0", "0.0.0.0"
@@ -67,9 +76,9 @@ def init():
             for key, value in device.items():
                 print("{}: {}".format(key, value))
     """
-    NOTE:
+    TODO: find a better way...
     First try to mount SDCard
-    Reset the board, if the device is busy (errno 16)
+    Reset the board, if the device is busy (errno 16) *
     After reset the SDCard will mount
     """
     if init.get("SDCARD"):
@@ -77,28 +86,26 @@ def init():
         mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
     
     """
-    Smart:   trys to connect each network saved in network.db
+    NOTE:
+    Smart: trys to connect each network saved in network.db
     Default: connect to the default network saved in network.db or network.json
     """
     if init.get("NETWORK"):
         print("\nnetwork...")
         from wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
         network = boot.get("NETWORK")
+        ap_if = network.get("AP_IF")
         if network.get("WIFI"):
             wifi = True
             reconnect = network.get("RECONNECT")
-            if network.get("SMART"):
-                smart_connect()
-            else:
-                connect()
+            if network.get("SMART"): smart_connect()
+            else: connect()
         if network.get("AP") or (network.get("AP_IF") and not is_connected()):
             start_ap()
-            ap = network.get("AP")
-            ap_if = network.get("AP_IF")
+            ap = True
             ip = get_ap_ip()
             if ip is not None: ap_ip_address = ip
-        else:
-            stop_ap()
+        else: stop_ap()
     
     if wifi and is_connected():
         connected = True
@@ -106,7 +113,7 @@ def init():
         if ip is not None: ip_address = ip
         """
         NOTE:
-        Declare Timezone UTC+ to set an offset for the RTC
+        Timezone UTC+ to set an offset for the RTC
         """
         from timezone import Timezone
         timezone = boot.get("TIMEZONE")
@@ -122,10 +129,9 @@ def init():
             timesync = True
             print('time synchronized')
         except Exception as e:
-            print('setting time failed')          
+            print('setting time failed')
         """
-        Backup:
-        timeset by online host
+        Backup: timeset by online host
         """
         if not timesync:
             try:
@@ -160,11 +166,9 @@ def init():
     
     if debug:
         print("\n----- SYSTEM -----")
-        keys = system.keys()
-        for key in keys:
-            print("{}: {}".format(key, system.get(key)))
+        for key in system.keys(): print("{}: {}".format(key, system.get(key)))
     
-    # delete database objects
+    # delete objects
     del boot
     del system
 

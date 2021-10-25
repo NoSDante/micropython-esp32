@@ -1,11 +1,10 @@
-import gc
 try:
     from app.database import Database
 except ImportError as e:
     raise ImportError("cannot import module", e)
 
 # setup
-def setup():     
+def setup():
     """
     Get data from JSON-File
     Save data to DB-File
@@ -15,12 +14,11 @@ def setup():
         database.clear()
         for json_file in json_files:
             json_data = database.get_json_data(json_file, path)
-            for key, value in json_data.items():
-                database.save(key=key, value=value)
+            for key, value in json_data.items(): database.save(key=key, value=value)
             if delete:
-                import os
-                os.remove(path+json_file)
-        print("keys saved:", len(database.keys()))
+                from os import remove
+                remove(path+json_file)
+        print("{} keys saved in database '{}'".format(len(database.keys()), db_file))
     
     # boot config
     setConfig("/boot.db", ["boot.json"])

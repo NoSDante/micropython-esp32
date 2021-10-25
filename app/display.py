@@ -46,6 +46,8 @@ class Display(object):
             "WHITE"         : (255, 255, 255),
             "BLACK"         : (  0,   0,   0),
             "CYAN"          : (  0, 255, 255),
+            "LIGHT CYAN"    : (224, 255, 255),
+            "AQUA MARINE"   : (127, 255, 212),
             "LIME"          : (  0, 255,   0),
             "YELLOW GREEN"  : (154, 205,  50),
             "YELLOW"        : (225, 255,   0),
