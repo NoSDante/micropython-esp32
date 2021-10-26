@@ -16,10 +16,12 @@
     "SPS30" : {
         "INIT"     : false
         "INTERVAL" : 2
+        "START"    : true
+        "CLEAN"    : true
         "SAMPLE"   : 1200
         "UART"     : 1
-        "RX_PIN"   : 32
-        "TX_PIN"   : 33
+        "RX"       : 32
+        "TX"       : 33
     },
     "SCD30" : {
         "INIT"               : true

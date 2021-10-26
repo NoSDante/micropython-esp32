@@ -1,16 +1,17 @@
 from machine import SPI, Pin
 
-
 class Display(object):
     
     class FontNotDefined(Exception):
         pass
-
-    BAUDRATE = 40000000
     
-    def __init__(self, slot=2, sck=18, mosi=23, miso=19, cs=5, dc=26, reset=25, led=None, width=240, height=320, rotation=0): 
+    BAUDRATE = 40000000
+    DEFAULT_COLOR = "WHITE"
+    
+    def __init__(self, slot=2, sck=18, mosi=23, miso=19, cs=5, dc=26, reset=25, led=None, width=240, height=320, rotation=0, debug=False): 
         self.display = None
         self.font = None
+        self.debug = debug
         
         try:
             from tft.ili9341 import Display, color565
@@ -19,8 +20,7 @@ class Display(object):
             spi = SPI(slot, baudrate=self.BAUDRATE, sck=Pin(sck), mosi=Pin(mosi), miso=Pin(miso))
             self.display = Display(spi, dc=Pin(dc), cs=Pin(cs), rst=Pin(reset), width=width, height=height, rotation=rotation)
             # set a Pin to power on/off the display
-            if led is not None:
-                self.tft.power = Pin(led, Pin.OUT, value=1)
+            if led is not None: self.tft.power = Pin(led, Pin.OUT, value=1)
         except OSError as e:
             raise OSError('cannot not initialize SPI bus! ', e)
     
@@ -39,7 +39,6 @@ class Display(object):
     Return a default value, if color not exists
     """
     def rgb(self, color):
-        default = "WHITE"
         colors = {
             "RED"           : (255,  10,  10),
             "GREEN"         : (  0, 128,   0),
@@ -58,20 +57,19 @@ class Display(object):
             "BLUE"          : (  0,   0, 255),
             "ORANGE RED"    : (255,  69,   0),
             "GRAY"          : (128, 128, 128)
-        }
+        }       
         if not color in colors:
-            #raise ValueError("rgb color does not exist")
-            print("color '{}' does not exist").format(color)
-            color = default
+            color = self.DEFAULT_COLOR
+            if self.debug: print("display color '{}' does not exist".format(value))
         r = colors[color][0]
         g = colors[color][1]
         b = colors[color][2]
         return r, g, b
     
     """DRAWING
-    NOTE: Writing shorter code, when using display driver functions
+    NOTE: Writing less code, when using display driver
     Not necessary to set the Font every time
-    Only set a declared color from the rgb color collection
+    Just set a value from rgb collection as color
     """
     def draw_text(self, x, y, text, color="WHITE"):
         if not self.font: raise self.FontNotDefined("a font is not defined")

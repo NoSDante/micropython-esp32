@@ -23,13 +23,11 @@ state = Store(
     ap = system.get("AP"),
     ap_if = system.get("AP_IF")
 )
-
 app = Store(
     ready = False,
     nightmode = False,
     lightshow = 0
 )
-
 sensors = Store(
     scd30 = False,
     bh1750 = False,
@@ -41,7 +39,6 @@ sensors = Store(
 # Lightstrip Demo
 async def runLightstripDemo(lightstrip):
     while not app.get('ready'):
-        print("Lightstrip Demo, when app ready:", app.get('ready'))
         lightstrip.each( 1, color="DARK ORANGE", clear=False)
         await asyncio.sleep(0.5)
         lightstrip.clear()
@@ -51,7 +48,7 @@ async def runLightstripDemo(lightstrip):
     await lightstrip.bounce(color="GREEN")
 
 # WiFi loop
-async def runReconnect(interval=3600, interval_if=600, retrys=2):
+async def runReconnect(interval=3600, interval_if=600, retrys=3):
     retry = 0
     from wifi import smart_connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
     while state.get('reconnect') > 0:
@@ -136,7 +133,7 @@ async def runWatchdogGas(mq2, interval=1):
     if debug: print("[MQ2] heater finished")
     while 1:
         if mq2.trigger.value() == 0:
-            if debug: print("[MQ2] gas detected")
+            if debug: print("[MQ2] gas or smoke detected")
             mq2.data = {
                 "Smoke": mq2.readSmoke(),
                 "LPG": mq2.readLPG(),
@@ -494,7 +491,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     tft.display.draw_vline(coord_x2-offset_x, vline_y, coord_y-START_Y-font_height, tft.color(LINE_COLOR))
     
     # score sensor value
-    scoring = Scoring()
+    scoring = Scoring(debug=debug)
     
     # reset values max, min
     reset_time = "00:00"
@@ -834,12 +831,13 @@ def main():
     # SPS30
     SPS30_INIT = config.get("SPS30").get("INIT")             # use sensor
     if SPS30_INIT:
-        SPS30_INTERVAL = config.get("SPS30").get("INTERVAL") # Loop async interval
+        SPS30_INTERVAL = config.get("SPS30").get("INTERVAL") # Loop async interval   
+        SPS30_START    = config.get("SPS30").get("START")    # Start measurement
+        SPS30_CLEAN    = config.get("SPS30").get("CLEAN")    # Clean fan
         SPS30_UART     = config.get("SPS30").get("UART")     # UART slot
         SPS30_RX       = config.get("SPS30").get("RX")       # RX Pin
         SPS30_TX       = config.get("SPS30").get("TX")       # TX Pin
         SPS30_SAMPLE   = config.get("SPS30").get("SAMPLE")   # default 1200
-        SPS30_START    = config.get("SPS30").get("START")    # Start sensor
     
     # SCD30
     SCD30_INIT = config.get("SCD30").get("INIT")                       # use sensor
@@ -855,12 +853,11 @@ def main():
     # BH1750
     BH1750_INIT     = config.get("BH1750").get("INIT")
     BH1750_INTERVAL = config.get("BH1750").get("INTERVAL")
-
+    
     # DISPLAY
     DISPLAY_INIT = config.get("DISPLAY").get("INIT")
     if DISPLAY_INIT:
         DISPLAY_INTERVAL = config.get("DISPLAY").get("INTERVAL")
-        
         # TFT
         TFT_SPI   = config.get("TFT").get("SPI")
         TFT_MOSI  = config.get("TFT").get("MOSI")
@@ -871,7 +868,6 @@ def main():
         TFT_RESET = config.get("TFT").get("RESET")
         TFT_LED   = config.get("TFT").get("LED")
         if TFT_LED == False: TFT_LED = None
-        
         # FONT
         FONT_FILE   = config.get("FONT").get("FILE")
         FONT_WIDTH  = config.get("FONT").get("WIDTH")
@@ -891,23 +887,19 @@ def main():
     # LOGGER
     LOGGER_INIT = config.get("LOG").get("INIT")
     if LOGGER_INIT: LOGGER_CONFIG = config.get("LOG")
-       
+    
     del config
     
     # Lightstrip
     lightstrip = Lightstrip(Pin(LIGHTSTRIP_DATA_PIN, Pin.OUT), pixel=LIGHTSTRIP_PIXEL)
     
+    print("\nloops...")
+    
     # Async loops
     loop = asyncio.get_event_loop()
     
-    # Lightstrip demo
-    loop.create_task(runLightstripDemo(lightstrip))
-    
     # Initializing I2C sensors
     sensor = Sensors(i2c=None, debug=debug)
-    
-    # BH1750
-    if BH1750_INIT: sensor.init_BH1750(i2c=None)
     
     # MQ2
     if MQ2_INIT:
@@ -918,11 +910,17 @@ def main():
             calibrate=MQ2_CALIBRATE
         )
     
+    # Lightstrip demo
+    loop.create_task(runLightstripDemo(lightstrip))
+    
+    # BH1750
+    if BH1750_INIT: sensor.init_BH1750(i2c=None)
+    
     # SCD30
     if SCD30_INIT: sensor.init_SCD30(i2c=None, start=SCD30_START, pause=SCD30_PAUSE)
     
     # SPS30
-    if SPS30_INIT: sensor.init_SPS30(slot=SPS30_UART, rx=SPS30_RX, tx=SPS30_TX, sample=SPS30_SAMPLE)
+    if SPS30_INIT: sensor.init_SPS30(slot=SPS30_UART, rx=SPS30_RX, tx=SPS30_TX, start=SPS30_START, clean=SPS30_CLEAN, sample=SPS30_SAMPLE)
     
     # AS3935
     if AS3935_INIT:
@@ -933,22 +931,17 @@ def main():
             indoor=AS3935_INDOOR,
             disturber=AS3935_DISTURBER
         ))
-    
-    # ILI9341
+        
     display = False
-    
+    # ILI9341
     if DISPLAY_INIT:
         print("\ndisplay initializing...")
-        
+        rotation = 90  # horizontal:90, vertical:0
         # DISPLAY
-        tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=320, height=240, rotation=90) # horizontal
-        #tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=240, height=320, rotation=0) # vertical
-
+        tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=320, height=240, rotation=rotation, debug=debug)
         # FONT
-        tft.setFont(FONT_FILE, FONT_WIDTH, FONT_HEIGHT)
-        font_height, font_width = tft.font_height, tft.font_width
-        
-        display = True
+        if tft is not None: tft.setFont(FONT_FILE, FONT_WIDTH, FONT_HEIGHT)
+        if tft.font is not None: display = True
     
     # show system status
 #     if display: loop.create_task(displaySystemState(tft))
@@ -971,9 +964,9 @@ def main():
     if hasattr(sensor, 'mq2'):
         sensors.set('mq2', True)
         loop.create_task(runWatchdogGas(sensor.mq2, interval=MQ2_INTERVAL))
-        
+    
     # WiFi loop
-    if state.get('reconnect') > 0: loop.create_task(runReconnect(state.get('reconnect'), 600, 2))
+    if state.get('reconnect') > 0: loop.create_task(runReconnect(state.get('reconnect'), 600, 3))
     
     # Logger loop
     if LOGGER_INIT: loop.create_task(runLogger(sensor, LOGGER_CONFIG))

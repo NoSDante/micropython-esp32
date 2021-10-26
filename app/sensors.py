@@ -2,9 +2,8 @@ import uasyncio as asyncio
 from machine import Pin, I2C, UART
 from time import sleep
 
-
 class Sensors():
-           
+    
     I2C_SLOT = 1
     I2C_SDA  = 21
     I2C_SCL  = 22
@@ -14,47 +13,40 @@ class Sensors():
     I2C_ERROR = "cannot initialize I2C"
     
     def __init__(self, i2c=None, debug=False):
-        
         self.debug = debug
         self.i2c = None
         self.uart = None
-        
-        if isinstance(i2c, I2C):
-            self.i2c = i2c
-        else:
-            self.init_I2C()
-        
+        if isinstance(i2c, I2C): self.i2c = i2c
+        else: self.init_I2C()
+    
     def init_I2C(self):
         try:            
             self.i2c = I2C(self.I2C_SLOT, scl=Pin(self.I2C_SCL), sda=Pin(self.I2C_SDA), freq=self.I2C_FREQ)
             #self.i2c = I2C(self.I2C_SLOT)
-            if self.debug: print(self.i2c)
+            if self.debug: print("\n----- I2C -----\n", self.i2c)
         except Exception as e:
             raise Exception(self.I2C_ERROR, e)
     
     def init_BH1750(self, i2c=None):        
         self.bh1750 = None
-        if isinstance(i2c, I2C): self.i2c = i2c
-        try:
-            from lib.bh1750 import BH1750
+        try: from lib.bh1750 import BH1750
         except ImportError as e:
             print(self.IMPORT_ERROR, e)
+        if isinstance(i2c, I2C): self.i2c = i2c
         self.bh1750 = BH1750(self.i2c)
         self.bh1750.data = {}
 
     def init_SPS30(self, slot=1, rx=32, tx=33, start=True, clean=True, sample=1200):
-        
         self.sps30 = None
         
-        try:
-            from lib.sps30 import SPS30
+        try: from lib.sps30 import SPS30
         except ImportError as e:
             print(self.IMPORT_ERROR, e)
         
         try:
             self.sps30 = SPS30(UART(slot, baudrate=115200, bits=8, parity=None, stop=1, rx=rx, tx=tx), debug=self.debug, sample=sample)
         except Exception as e:
-            print('cannot initialize UART', e)
+            print(self.I2C_ERROR, e)
         
         self.sps30.Standby(debug=self.debug)
         
@@ -62,19 +54,13 @@ class Sensors():
         
         self.sps30.data = {}
         self.sps30.ready = True
-        
-        if clean:
-            self.sps30.fan_clean(debug=self.debug)
-        
-        if start:
-            self.sps30.start_measurement(debug=self.debug)
+        if clean: self.sps30.fan_clean(debug=self.debug)
+        if start: self.sps30.start_measurement(debug=self.debug)
             
-    def init_SCD30(self, i2c=None, start=True, pause=1000):
-        
+    def init_SCD30(self, i2c=None, start=True, pause=1000):        
         self.scd30 = None
         
-        try:
-            from lib.scd30 import SCD30
+        try: from lib.scd30 import SCD30
         except Exception as e:
             print(self.IMPORT_ERROR, e)
             
@@ -86,7 +72,7 @@ class Sensors():
         try:
             self.scd30 = SCD30(self.i2c, SCD30_I2C_ADDR, pause=pause)
         except Exception as e:
-            print('cannot initialize I2C', e)
+            print(self.I2C_ERROR, e)
         
         self.scd30.data = {}
         self.scd30.started = False
@@ -106,11 +92,9 @@ class Sensors():
             print("Altitude Comp: {}".format(self.scd30.get_altitude_comp()))
       
     async def init_AS3935(self, i2c=None, pin_irq=None, capacitance=120, indoor=True, disturber=True):
-                
         self.as3935 = None
         
-        try:
-            from lib.DFRobot_AS3935_Lib import DFRobot_AS3935
+        try: from lib.DFRobot_AS3935_Lib import DFRobot_AS3935
         except ImportError as e:
             print(self.IMPORT_ERROR, e)
         
@@ -133,6 +117,7 @@ class Sensors():
                 asyncio.sleep(0.5)
                 
         if not self.as3935.reset():
+            self.as3935 = None
             return
         
         self.as3935.data = {}
@@ -183,14 +168,13 @@ class Sensors():
         # view all register data
         if self.debug: self.as3935.printAllRegs()
     
-    def init_MQ2(self, pin_analog=None, pin_trigger=None, baseVoltage=5.0, interval=2, calibrate=True, debug=True):
+    def init_MQ2(self, pin_analog=None, pin_trigger=None, baseVoltage=5.0, interval=2, calibrate=True):
         
         self.mq2 = None
        
         if pin_analog is None: raise ValueError('analog pin is not defined')
         
-        try:
-            from lib.MQ2 import MQ2
+        try: from lib.MQ2 import MQ2
         except ImportError as e:
             print(self.IMPORT_ERROR, e)
         
@@ -225,7 +209,12 @@ class Sensors():
             print("Pin Digital trigger: {}".format(pin_trigger))
 
 class Scoring(object):
-        
+    
+    DEFAULT_VALUE = "DEFAULT"
+    
+    def __init__(self, debug=False):
+        self.debug = debug
+    
     def co2(self, value):
         score = None
         if value is None: return score
@@ -248,8 +237,7 @@ class Scoring(object):
     def temperature(self, value):
         score = None
         if value is None: return score
-        if value <= 0:
-            score = "FREEZE"
+        if value <= 0: score = "FREEZE"
         return score
     
     def heatindex(self, temp, hum):
@@ -293,7 +281,6 @@ class Scoring(object):
         return score
     
     def color(self, value):
-        default = "DEFAULT"
         colors = {
                 "EXCELLENT" : ("GREEN"),
                 "GREAT"     : ("GREEN"),
@@ -314,6 +301,6 @@ class Scoring(object):
                 "UNKNOWN"   : ("ORANGE RED")
             }
         if not value in colors:
-            print("score color '{}' does not exist".format(value))
-            value = default
+            value = self.DEFAULT_VALUE
+            if self.debug: print("score color '{}' does not exist".format(value))
         return colors[value]
