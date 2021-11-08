@@ -10,7 +10,7 @@ print("----- Test Database -----")
 print(db)
 
 print("----- INIT -----")
-database = Database(db, create=True)
+database = Database(db, delete=True, create=True)
 database = Database(db)
 print(database)
 

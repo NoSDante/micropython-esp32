@@ -1,5 +1,5 @@
 try:
-    from app.database import Database
+    from core.database import Database
 except ImportError as e:
     raise ImportError("cannot import module", e)
 

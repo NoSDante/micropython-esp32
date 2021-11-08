@@ -18,8 +18,8 @@
         "INTERVAL" : 2
         "START"    : true
         "CLEAN"    : true
-        "SAMPLE"   : 1200
-        "UART"     : 1
+        "SAMPLE"   : 60
+        "PORT"     : 1
         "RX"       : 32
         "TX"       : 33
     },

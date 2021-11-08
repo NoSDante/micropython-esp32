@@ -6,8 +6,8 @@
         "BLUETOOTH" : false
     },
     "TIMEZONE": {
-        "UTC"     : 2
-        "ZONE"    : "MESZ - Mitteleuropäische Sommerzeit (UTC+2)"
+        "UTC"     : 1
+        "ZONE"    : "MESZ - Mitteleuropäische Winterzeit (UTC+1)"
         "SUMMMER" : 3
         "WINTER"  : 10
     },

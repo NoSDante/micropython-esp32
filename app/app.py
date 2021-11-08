@@ -2,8 +2,10 @@ from machine import Pin
 from time import sleep, sleep_ms, localtime, mktime, ticks_ms, ticks_diff
 import uasyncio as asyncio
 
+# Core libs
+from core.database import Database
+
 # App libs
-from app.database import Database
 from app.store import Store
 from app.display import Display
 from app.lightstrip import Lightstrip
@@ -16,6 +18,7 @@ debug = system.get("DEBUG")
 # Store object is global
 state = Store(
     reconnect = system.get("RECONNECT"),
+    utc = system.get("UTC"),
     timesync = system.get("TIMESYNC"),
     sdcard = system.get("SDCARD"),
     wifi = system.get("WIFI"),
@@ -50,8 +53,8 @@ async def runLightstripDemo(lightstrip):
 # WiFi loop
 async def runReconnect(interval=3600, interval_if=600, retrys=3):
     retry = 0
-    from wifi import smart_connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
-    while state.get('reconnect') > 0:
+    from core.wifi import smart_connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
+    while interval > 0:
         await asyncio.sleep(interval)
         if debug: print('network' , end=' ')
         if state.get('wifi') and not is_connected():
@@ -68,24 +71,21 @@ async def runReconnect(interval=3600, interval_if=600, retrys=3):
                 interval = state.get('reconnect')
                 if state.get('timesync') is not True:
                     from ntptime import settime
-                    from timezone import Timezone
-                    timezone = boot.get("TIMEZONE")
-                    utc = timezone.get("UTC")
-                    if debug: print("TIMEZONE:", timezone.get("ZONE"))
+                    from core.timezone import Timezone
                     settime()
-                    Timezone(utc).offset()                    
+                    Timezone(state.get('utc')).offset()          
                     state.set('timesync', True)
                     if debug: print('time synchronized')
             else:
                 state.set("connected", False)
                 state.set("ip_address", "0.0.0.0")
-                interval = interval_if
-                retry += 1
+                if retry == 0: interval = interval_if
+                if retry != retrys: retry += 1
+            # Start Access Point as fallback when reaching retrys
             if retry == retrys and state.get('ap_if'):
                 start_ap()
                 state.set("ap_ip_address", get_ap_ip())
-                #interval = state.get('reconnect')
-                #state.set('reconnect', 0)
+                interval = 0
 
 # Logger loop
 async def runLogger(sensor, config):
@@ -227,7 +227,7 @@ async def runWatchdogDust(sps30, interval=2):
         except Exception as e:
             if debug:
                 err_read += 1
-                print("SPS30 read error! counts {}, {}").format(err_read, e)
+                print("SPS30 read error! counts {}, {}".format(err_read, e))
             pass
     await asyncio.sleep(interval)
 
@@ -259,93 +259,57 @@ async def displaySystemState(tft):
     START_X = BORDER_X + offset_x
     START_Y = BORDER_Y + offset_y
     
-    # Page 1    
-    coord_x, coord_x1 = START_X, 90
-
-    # header device
-    text = "Device Info"    
-    tft.display.draw_text(START_X, START_Y, text, tft.font, tft.color("WHITE"))
+    # Page 1
+    line, max_lines = 1, 7
+    coord_y = START_Y
+    coord_x, coord_x1 = START_X, 180
+    
+    # header
+    text = "System State"
+    tft.display.draw_text(START_X, START_Y, text, tft.font, tft.color("CYAN"))
     # draw line
     coord_y = START_Y + font_height + offset_y
     tft.display.draw_hline(0, coord_y, tft.display.width, tft.color("WHITE"))
+    
+    async def progressbar():
+        # progress bar
+        rect_height = 6
+        rect_width = 31
+        rect_x = 3
+        rect_y = 230
+        rect_range = 10
+        outer_width = (rect_width*rect_range) + rect_x-3
+        tft.display.draw_rectangle(rect_x-1, rect_y-1, outer_width, rect_height+2, tft.color("WHITE"))
+        for i in range(rect_range):
+            tft.display.fill_rectangle(rect_x, rect_y, rect_width, rect_height, tft.color("GREEN"))
+            rect_x = rect_x + rect_width
+            await asyncio.sleep(0.5)
     
     # coord-y vertical line
     vline_y = coord_y
-    # device info
-    max_lines = 5
-    for key, value in boot.get("DEVICE").items():
-        coord_y += START_Y
-        tft.display.draw_text(coord_x, coord_y, key, tft.font, tft.color("WHITE"))
-        tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color("WHITE"))
-        # draw horizontal line
-        coord_y += font_height + offset_y
-        tft.display.draw_hline(0, coord_y, tft.display.width, tft.color("WHITE"))
+    # system info#
+    for key in system.keys():
+        if line == max_lines:
+            tft.display.draw_vline(coord_x1-offset_x, vline_y, coord_y-START_Y-font_height, tft.color("WHITE"))
+            await progressbar()
+            line = 1
+            coord_y = START_Y + font_height + offset_y
+            tft.display.fill_rectangle(1, coord_y+1, tft.display.width-(BORDER_X*2), tft.display.height-coord_y-(BORDER_Y*2), tft.color("BLACK"))    
+        value = app.get(key)
+        if not value:
+            value = system.get(key)
+            if isinstance(value, bool): value = "YES" if value else "NO"
+            coord_y += START_Y
+            tft.display.draw_text(coord_x, coord_y, key, tft.font, tft.color("WHITE"))
+            tft.display.draw_text(coord_x1, coord_y, str(value), tft.font, tft.color("WHITE"))
+            # draw horizontal line
+            coord_y += font_height + offset_y
+            tft.display.draw_hline(0, coord_y, tft.display.width, tft.color("WHITE"))
+            line += 1
     # draw vertical line
     tft.display.draw_vline(coord_x1-offset_x, vline_y, coord_y-START_Y-font_height, tft.color("WHITE"))
     
-    # progress bar
-#     rect_range = 3
-#     rect_height = 20
-#     rect_width = 310 // rect_range
-#     rect_x = 5
-#     rect_y = 215
-#     outer_width = (rect_width*rect_range) + rect_x-3
-#     tft.display.draw_rectangle(rect_x-1, rect_y-1, outer_width, rect_height+2, tft.color("WHITE"))
-#     for i in range(rect_range):
-#         tft.display.fill_rectangle(rect_x, rect_y, rect_width, rect_height, tft.color("GREEN"))
-#         rect_x = rect_x + rect_width
-#         await asyncio.sleep(1)
-#     await asyncio.sleep(1)
-
-    await asyncio.sleep(30)
-
-    # clearing stage
-    tft.display.clear()
-    
-    # Page 2
-    coord_y = START_Y
-    coord_x, coord_x1 = START_X, 90
-    
-    # page border
-    if border:
-        tft.display.draw_rectangle(0, 0, tft.display.width, tft.display.height, tft.color("WHITE"))
-        
-    # header system info
-    text = "System State"
-    tft.display.draw_text(START_X, START_Y, text, tft.font, tft.color("WHITE"))
-    # draw line
-    coord_y = START_Y + font_height + offset_y
-    tft.display.draw_hline(0, coord_y, tft.display.width, tft.color("WHITE"))
-    
-    # coord-y vertical line
-    vline_y = coord_y    
-    # system info
-    keys = system.keys() # global system
-    for key in keys:
-        value = system.get(key)
-        coord_y += START_Y
-        tft.display.draw_text(coord_x, coord_y, key, tft.font, tft.color("WHITE"))
-        tft.display.draw_text(coord_x1, coord_y, str(value), tft.font, tft.color("WHITE"))
-        # draw horizontal line
-        coord_y += font_height + offset_y
-        tft.display.draw_hline(0, coord_y, tft.display.width, tft.color("WHITE"))
-    # draw vertical line
-    tft.display.draw_vline(coord_x1-offset_x, vline_y, coord_y-START_Y-font_height, tft.color("WHITE"))
-    
-    await asyncio.sleep(1)
-    
-    # progress bar
-    rect_height = 10
-    rect_width = 31
-    rect_x = 5
-    rect_y = 225
-    rect_range = 10
-    outer_width = (rect_width*rect_range) + rect_x-3
-    tft.display.draw_rectangle(rect_x-1, rect_y-1, outer_width, rect_height+2, tft.color("WHITE"))
-    for i in range(rect_range):
-        tft.display.fill_rectangle(rect_x, rect_y, rect_width, rect_height, tft.color("GREEN"))
-        rect_x = rect_x + rect_width
-        await asyncio.sleep(0.5)
+    await progressbar()
     
     # del database object
     del boot
@@ -426,6 +390,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     clear_width_x1   = tft.display.width - clear_width_x - (tft.display.width - coord_x2) - (offset_x*2) - START_X
     clear_width_x2   = tft.display.width - clear_width_x - clear_width_x1 - (offset_x*2) - START_X - BORDER_X
 
+
     # clocktime, date
     now = time()[0:5]
     today = date()
@@ -442,8 +407,11 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     coord_y = START_Y + font_height
     tft.display.draw_hline(0, coord_y, tft.display.width, tft.color(LINE_COLOR))
     
-    # warning is cleared
+    # is warning cleared
     warning_cleared = False
+    
+    # last connection state
+    last_connected = None
     
     # set mectric for sensor
     # order by line drawing
@@ -522,14 +490,15 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
             now = clocktime
             tft.display.fill_rectangle(START_X, START_Y, clear_width_x, font_height, tft.color(CLEAR_COLOR))
             tft.display.draw_text(START_X, START_Y, now, tft.font, tft.color(CLOCK_COLOR))
-        color = "GREEN"
-        if state.get('wifi'): text = "WiFi"
-        if not state.get('connected'): color = "DARK ORANGE"
-        if state.get('ap'):
-            text = "AP"
-            color = "DEEP SKY BLUE"
-        tft.display.fill_rectangle(netstate_coord_x, START_Y, tft.display.width-netstate_coord_x-offset_x, font_height, tft.color(CLEAR_COLOR))
-        tft.display.draw_text(netstate_coord_x, START_Y, text, tft.font, tft.color(color))
+        connected = state.get('connected')
+        if connected != last_connected:
+            last_connected = connected
+            text, color = "OFF", "GRAY"
+            if state.get('wifi'): text, color = "WiFi", "GREEN"
+            if not connected: color = "DARK ORANGE"
+            if state.get('ap') or state.get('ap_if'): text, color = "AP", "DEEP SKY BLUE"
+            tft.display.fill_rectangle(netstate_coord_x, START_Y, tft.display.width-netstate_coord_x-offset_x, font_height, tft.color(CLEAR_COLOR))
+            tft.display.draw_text(netstate_coord_x, START_Y, text, tft.font, tft.color(color))
         
         """
         NOTE:
@@ -751,16 +720,16 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 lightstrip.clear()
                 # clear area
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-               
-        """
-        END: progressbar
-        """
+            
         # reset init
-        progressbar_time = interval / rect_range
-        rect_bar_x = rect_x
         if reset: reset_done = True
         reset = False
         
+        """
+        END: progressbar
+        """
+        progressbar_time = interval / rect_range
+        rect_bar_x = rect_x        
         # draw progressbar
         tft.display.draw_rectangle(rect_x-BORDER_X, rect_y-BORDER_Y, outer_width, rect_height+2, tft.color("WHITE"))
         # compute time difference
@@ -834,7 +803,7 @@ def main():
         SPS30_INTERVAL = config.get("SPS30").get("INTERVAL") # Loop async interval   
         SPS30_START    = config.get("SPS30").get("START")    # Start measurement
         SPS30_CLEAN    = config.get("SPS30").get("CLEAN")    # Clean fan
-        SPS30_UART     = config.get("SPS30").get("UART")     # UART slot
+        SPS30_PORT     = config.get("SPS30").get("PORT")     # UART slot
         SPS30_RX       = config.get("SPS30").get("RX")       # RX Pin
         SPS30_TX       = config.get("SPS30").get("TX")       # TX Pin
         SPS30_SAMPLE   = config.get("SPS30").get("SAMPLE")   # default 1200
@@ -920,7 +889,7 @@ def main():
     if SCD30_INIT: sensor.init_SCD30(i2c=None, start=SCD30_START, pause=SCD30_PAUSE)
     
     # SPS30
-    if SPS30_INIT: sensor.init_SPS30(slot=SPS30_UART, rx=SPS30_RX, tx=SPS30_TX, start=SPS30_START, clean=SPS30_CLEAN, sample=SPS30_SAMPLE)
+    if SPS30_INIT: sensor.init_SPS30(port=SPS30_PORT, rx=SPS30_RX, tx=SPS30_TX, start=SPS30_START, clean=SPS30_CLEAN, sample=SPS30_SAMPLE)
     
     # AS3935
     if AS3935_INIT:
@@ -944,9 +913,9 @@ def main():
         if tft.font is not None: display = True
     
     # show system status
-#     if display: loop.create_task(displaySystemState(tft))
-#     else: app.set('ready', True)
-    app.set('ready', True)
+    if display: loop.create_task(displaySystemState(tft))
+    else: app.set('ready', True)
+#    app.set('ready', True)
     
     # Watchdog loops
     if hasattr(sensor, 'scd30'):

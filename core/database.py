@@ -9,11 +9,14 @@ class Database():
     class NotDefinedException(Exception):
         pass
     
-    def __init__(self, database="/micro.db", pagesize=1024, create=False):
+    def __init__(self, database="/micro.db", pagesize=1024, delete=False, create=False):
         self.btree = None
         self.create = create
         self.database = database
         self.pagesize = pagesize
+        if delete:
+            try: self.drop()
+            except: print("could not delete db-file")         
         self._open()
         
     def _open(self):

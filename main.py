@@ -1,5 +1,5 @@
 import gc
-from app.database import Database
+from core.database import Database
 
 # main
 print("main...")
@@ -38,6 +38,14 @@ def init():
     
     """
     Default system params as fallback
+    bool: mounted:   is SD-Card mounted
+    bool: timesync:  is time sync
+    bool: ap:        start Access Point
+    bool: ap_if:     start Access Point, if wifi not connected
+    bool: wifi:      use WiFi
+    bool: rtc:       use rtc
+    int:  utc:       set a timezone
+    int:  reconnect: time for WiFi try-reconnecting loop 0=off
     """
     debug, mounted, wifi, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False
     ip_address, ap_ip_address = "0.0.0.0", "0.0.0.0"
@@ -65,11 +73,9 @@ def init():
         -------------------------------------------
         """
         from machine import reset_cause, wake_reason
-        from  esp32 import raw_temperature
         print("\n----- MACHINE -----")
         print("reset cause:", reset_cause())
         print("wake reason:", wake_reason())
-        print("esp32 raw temperature: {} °C | {} °F".format((raw_temperature()-32)*5/9, raw_temperature()))
         device = boot.get("DEVICE")
         if device is not None:
             print("\n----- DEVICE -----")
@@ -78,77 +84,80 @@ def init():
     """
     TODO: find a better way...
     First try to mount SDCard
-    Reset the board, if the device is busy (errno 16) *
+    Reset the board, if the device is busy (errno 16)
     After reset the SDCard will mount
     """
     if init.get("SDCARD"):
-        from sdcard import mount
+        from core.sdcard import mount
         mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
     
     """
-    NOTE:
     Smart: trys to connect each network saved in network.db
     Default: connect to the default network saved in network.db or network.json
     """
     if init.get("NETWORK"):
         print("\nnetwork...")
-        from wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
+        from core.wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
         network = boot.get("NETWORK")
         ap_if = network.get("AP_IF")
+        ap_start = False
         if network.get("WIFI"):
+            stop_ap()
             wifi = True
             reconnect = network.get("RECONNECT")
             if network.get("SMART"): smart_connect()
             else: connect()
-        if network.get("AP") or (network.get("AP_IF") and not is_connected()):
+            if is_connected():
+                connected = True
+                ip = get_ip()
+                if ip is not None: ip_address = ip
+                """
+                Timezone UTC+ to set an offset for the RTC
+                """
+                from timezone import Timezone
+                timezone = boot.get("TIMEZONE")
+                utc = timezone.get("UTC")
+                if debug: print("TIMEZONE:", timezone.get("ZONE"))   
+                """
+                timeset by ntptime modul
+                """
+                try:
+                    from ntptime import settime
+                    settime()
+                    Timezone(utc).offset()
+                    timesync = True
+                    print('time synchronized')
+                except Exception as e:
+                    print('setting time failed')
+                """
+                Fallback: timeset by online host
+                """
+                if not timesync:
+                    try:
+                        Timezone(utc).settime()
+                        timesync = True
+                        print('time synchronized in fallback')
+                    except Exception as e:
+                        print('setting time failed in fallback')
+            elif ap_if:
+                ap_start = True
+        elif network.get("AP"):
+            ap = ap_start = True
+        if ap_start:
             start_ap()
-            ap = True
             ip = get_ap_ip()
-            if ip is not None: ap_ip_address = ip
-        else: stop_ap()
-    
-    if wifi and is_connected():
-        connected = True
-        ip = get_ip()
-        if ip is not None: ip_address = ip
-        """
-        NOTE:
-        Timezone UTC+ to set an offset for the RTC
-        """
-        from timezone import Timezone
-        timezone = boot.get("TIMEZONE")
-        utc = timezone.get("UTC")
-        if debug: print("TIMEZONE:", timezone.get("ZONE"))   
-        """
-        timeset by ntptime modul
-        """
-        try:
-            from ntptime import settime
-            settime()
-            Timezone(utc).offset()
-            timesync = True
-            print('time synchronized')
-        except Exception as e:
-            print('setting time failed')
-        """
-        Backup: timeset by online host
-        """
-        if not timesync:
-            try:
-                Timezone(utc).settime()
-                timesync = True
-                print('time synchronized')
-            except Exception as e:
-                print('setting time failed')
-        
-    elif boot.get("RTC"):
+            if ip is not None: ap_ip_address = ip  
+    """
+    TODO:
+    Sync time by RTC
+    """    
+    if not timesync and boot.get("RTC"):
         print("TODO: sync time by RTC modul...")
         print("MODUL:", boot.get("RTC").get("MODUL"))
-    
+        
     """
-    NOTE:
-    Store states in db-file to controll system in process
-    The db-file is global accessable for read- and writing
+    Store states in db-file
+    db-file is global accessable
     """
     system = Database(SYSTEM_DATABASE, create=True)
     system.save("IP_ADDRESS", ip_address)
@@ -167,10 +176,6 @@ def init():
     if debug:
         print("\n----- SYSTEM -----")
         for key in system.keys(): print("{}: {}".format(key, system.get(key)))
-    
-    # delete objects
-    del boot
-    del system
 
 # init
 init()

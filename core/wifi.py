@@ -1,6 +1,6 @@
 from network import WLAN, STA_IF, AP_IF
 from time import sleep_ms
-from app.database import Database
+from core.database import Database
 
 
 def is_connected():

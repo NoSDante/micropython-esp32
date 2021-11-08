@@ -11,6 +11,7 @@ class Sensors():
     
     IMPORT_ERROR = "cannot import module"
     I2C_ERROR = "cannot initialize I2C"
+    UART_ERROR = "cannot initialize UART"
     
     def __init__(self, i2c=None, debug=False):
         self.debug = debug
@@ -36,7 +37,7 @@ class Sensors():
         self.bh1750 = BH1750(self.i2c)
         self.bh1750.data = {}
 
-    def init_SPS30(self, slot=1, rx=32, tx=33, start=True, clean=True, sample=1200):
+    def init_SPS30(self, port=1, rx=9, tx=10, start=True, clean=True, sample=60):
         self.sps30 = None
         
         try: from lib.sps30 import SPS30
@@ -44,9 +45,9 @@ class Sensors():
             print(self.IMPORT_ERROR, e)
         
         try:
-            self.sps30 = SPS30(UART(slot, baudrate=115200, bits=8, parity=None, stop=1, rx=rx, tx=tx), debug=self.debug, sample=sample)
+            self.sps30 = SPS30(port=UART(port, baudrate=115200, bits=8, parity=None, stop=1, rx=rx, tx=tx), debug=self.debug, sample=sample)
         except Exception as e:
-            print(self.I2C_ERROR, e)
+            print(self.UART_ERROR, e)
         
         self.sps30.Standby(debug=self.debug)
         
