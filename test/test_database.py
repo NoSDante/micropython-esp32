@@ -1,4 +1,4 @@
-from app.database import Database
+from core.database import Database
 import time
 
 
@@ -98,4 +98,5 @@ try:
 except Exception as e:
     print(e)
     
-print("\nexecution time: " +str(time.time()-start)+ " sec")
+print("\n----- TEST FINISHED -----")
+print("execution time: " +str(time.time()-start)+ " sec")

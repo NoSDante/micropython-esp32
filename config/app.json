@@ -8,10 +8,11 @@
     },
     "LOG" : {
         "INIT"      : true
-        "INTERVAL"  : 60
+        "INTERVAL"  : 10
         "PATH"      : "/log/"
-        "FILE"      : "data"  
+        "FILE"      : "data"
         "MIMETYPE"  : "csv"
+        "TIME"      : "23:59"
         "TOSDCARD"  : true
     },
     "LIGHTSTRIP": {

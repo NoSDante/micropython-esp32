@@ -35,7 +35,6 @@ def init():
                 "AP": True
             }
         }
-    
     """
     Default system params as fallback
     bool: mounted:   is SD-Card mounted
@@ -79,8 +78,8 @@ def init():
         device = boot.get("DEVICE")
         if device is not None:
             print("\n----- DEVICE -----")
-            for key, value in device.items():
-                print("{}: {}".format(key, value))
+            for key, value in device.items(): print("{}: {}".format(key, value))
+    
     """
     TODO: find a better way...
     First try to mount SDCard
@@ -92,7 +91,7 @@ def init():
         mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
     
     """
-    Smart: trys to connect each network saved in network.db
+    Smart:   trys to connect each network saved in network.db
     Default: connect to the default network saved in network.db or network.json
     """
     if init.get("NETWORK"):
@@ -102,9 +101,11 @@ def init():
         ap_if = network.get("AP_IF")
         ap_start = False
         if network.get("WIFI"):
-            stop_ap()
+            #stop_ap()
             wifi = True
             reconnect = network.get("RECONNECT")
+            timezone = boot.get("TIMEZONE")
+            utc = timezone.get("UTC")
             if network.get("SMART"): smart_connect()
             else: connect()
             if is_connected():
@@ -114,10 +115,8 @@ def init():
                 """
                 Timezone UTC+ to set an offset for the RTC
                 """
-                from timezone import Timezone
-                timezone = boot.get("TIMEZONE")
-                utc = timezone.get("UTC")
-                if debug: print("TIMEZONE:", timezone.get("ZONE"))   
+                from core.timezone import Timezone
+                if debug: print("timezone:", timezone.get("ZONE"))
                 """
                 timeset by ntptime modul
                 """
@@ -146,7 +145,8 @@ def init():
         if ap_start:
             start_ap()
             ip = get_ap_ip()
-            if ip is not None: ap_ip_address = ip  
+            if ip is not None: ap_ip_address = ip
+    
     """
     TODO:
     Sync time by RTC
@@ -154,7 +154,7 @@ def init():
     if not timesync and boot.get("RTC"):
         print("TODO: sync time by RTC modul...")
         print("MODUL:", boot.get("RTC").get("MODUL"))
-        
+    
     """
     Store states in db-file
     db-file is global accessable

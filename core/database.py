@@ -14,9 +14,7 @@ class Database():
         self.create = create
         self.database = database
         self.pagesize = pagesize
-        if delete:
-            try: self.drop()
-            except: print("could not delete db-file")         
+        if delete: self.drop()
         self._open()
         
     def _open(self):
@@ -88,10 +86,12 @@ class Database():
         """
         Delete db-file
         """
-        from os import remove
-        remove(self.database)
+        from os import remove, listdir
+        path = self.database.replace("/", "", 1).split("/")[0] if len(self.database.replace("/", "", 1).split("/")) > 1 else ""        
+        file = self.database.replace("/", "", 1).split("/")[1] if len(self.database.replace("/", "", 1).split("/")) > 1 else self.database.replace("/", "", 1)
+        if file in listdir(path): remove(self.database)
         self.btree = None
-        
+    
     def clear(self):
         """
         Delete all keys
@@ -121,9 +121,10 @@ class Database():
         """
         Get data from JSON-File
         """
-        if len(file) == 0: raise ValueError('filename undefined')
+        if not isinstance(file, str): raise ValueError('file is not defined')
         from os import listdir
         if not file in (listdir(path)): raise self.NotFoundException("file '{}' does not exist".format(file))
-        file = path + file
-        with open(file) as json_file: json_data = json.load(json_file)
+        with open(path+file) as json_file:
+            try: json_data = json.load(json_file)
+            except: json_data = None
         return json_data

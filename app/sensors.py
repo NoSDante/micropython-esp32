@@ -190,7 +190,7 @@ class Sensors():
         
         self.mq2 = MQ2(pinData=pin_analog, baseVoltage=baseVoltage, measuringStrategy=STRATEGY_FAST)
         self.mq2.calibration = False
-        self.mq2.data = None
+        self.mq2.data = {}
 
         # Calibration default sampletime 5000ms x (5)
         if calibrate:

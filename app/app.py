@@ -96,19 +96,39 @@ async def runLogger(sensor, config):
     LOG_FILE     = config.get("FILE")
     LOG_MIMETYPE = config.get("MIMETYPE")
     LOG_TOSDCARD = config.get("TOSDCARD")
+    LOG_TIME     = config.get("TIME")
     
     await asyncio.sleep(20)
+    data, i = [], 1
+    
     while 1:
+        tmp = {}
+        # log data to file
+        if time()[0:5] == LOG_TIME:
+            if debug: print("write file...")
+            data, i = [], 1
+            await asyncio.sleep(60-LOG_INTERVAL)
         if debug: print("logging...")
         if hasattr(sensor, 'scd30'):
-            print("log scd30 data")
-            print("date_as_int", date_as_int())
+            if debug: print("log scd30 data")
+            tmp = sensor.scd30.data
+            tmp.update({"id": i, "sensor": "scd30", "timestamp": timestamp()})
+            data.append(tmp)
         if hasattr(sensor, 'mq2'):
-            print("log mq2 data")            
+            if debug: print("log mq2 data")
+            tmp = sensor.mq2.data
+            if len(tmp) != 0:
+                tmp.update({"id": i, "sensor": "mq2", "timestamp": timestamp()})
+                data.append(tmp)
         if hasattr(sensor, 'bh1750'):
-            print("log bh1750 data")
+            if debug: print("log bh1750 data")
+            tmp = sensor.bh1750.data
+            tmp.update({"id": i, "sensor": "bh1750", "timestamp": timestamp()})
+            data.append(tmp)
         if hasattr(sensor, 'sps30'):
             print("log sps30 data")
+        print(i)
+        i += 1
         await asyncio.sleep(LOG_INTERVAL)
 
 # AS3935 loop
@@ -177,7 +197,10 @@ async def runWatchdogCO2(scd30, interval=2):
             co2  = int(co2)
             temp = round(temp, 1)
             relh = int(relh)
-            if len(scd30.data) != 0:
+            print(co2)
+            print(temp)
+            print(temp)
+            if len(scd30.data) != 0 and co2 is not None and temp is not None:
                 if co2 < scd30.data.get("co2_min") or co2_min == 0: co2_min = co2
                 if co2 > scd30.data.get("co2_max"): co2_max = co2
                 if temp < scd30.data.get("temp_min"): temp_min = temp
@@ -198,6 +221,7 @@ async def runWatchdogCO2(scd30, interval=2):
                 'relh': relh,
                 'relh_max': relh_max,
                 'relh_min': relh_min,
+                'error': 0,
                 'time': time(),
                 "date": date()
                 }
@@ -206,6 +230,7 @@ async def runWatchdogCO2(scd30, interval=2):
                 print("[SCD30] CO2: {} ppm | Temp.: {:2.1f} °C | Hum.: {} % | max.".format(co2_max, temp_max, relh_max))
                 print("[SCD30] CO2: {} ppm | Temp.: {:2.1f} °C | Hum.: {} % | min.".format(co2_min, temp_min, relh_min))            
         except Exception as e:
+            scd30.data = {'error': 1}
             if debug:
                 err_read += 1
                 print("SCD30 read error! counts {}, {}".format(err_read, e))
@@ -488,17 +513,20 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         if now != clocktime:
             reset_done = False
             now = clocktime
-            tft.display.fill_rectangle(START_X, START_Y, clear_width_x, font_height, tft.color(CLEAR_COLOR))
-            tft.display.draw_text(START_X, START_Y, now, tft.font, tft.color(CLOCK_COLOR))
+            if state.get("timesync"):
+                tft.display.fill_rectangle(START_X, START_Y, clear_width_x, font_height, tft.color(CLEAR_COLOR))
+                tft.display.draw_text(START_X, START_Y, now, tft.font, tft.color(CLOCK_COLOR))
         connected = state.get('connected')
         if connected != last_connected:
+            offset_coord_x = 0
             last_connected = connected
             text, color = "OFF", "GRAY"
             if state.get('wifi'): text, color = "WiFi", "GREEN"
             if not connected: color = "DARK ORANGE"
-            if state.get('ap') or state.get('ap_if'): text, color = "AP", "DEEP SKY BLUE"
-            tft.display.fill_rectangle(netstate_coord_x, START_Y, tft.display.width-netstate_coord_x-offset_x, font_height, tft.color(CLEAR_COLOR))
-            tft.display.draw_text(netstate_coord_x, START_Y, text, tft.font, tft.color(color))
+            if state.get('ap'): text, color = "AP", "DEEP SKY BLUE"
+            if state.get('ap_if') and state.get('wifi') and not connected: text, offset_coord_x = "WiFi+AP", 40
+            tft.display.fill_rectangle(netstate_coord_x-offset_coord_x, START_Y, tft.display.width-netstate_coord_x-offset_x, font_height, tft.color(CLEAR_COLOR))
+            tft.display.draw_text(netstate_coord_x-offset_coord_x, START_Y, text, tft.font, tft.color(color))
         
         """
         NOTE:
@@ -508,7 +536,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         coord_y = START_Y + font_height + offset_y
         
         """scd30
-        Area:    CO2
+        Area:    CO2, Scorecolor
         Coords:  x1, x2 
         Scoring: value
         """
@@ -526,6 +554,9 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 else:
                     co2_score_color = VALUE_COLOR
                     co2_warning = None
+                if sensor.scd30.data.get("error") == 1:
+                    co2_warning = "SCD30 read error!"
+                    co2_score_color = "RED"
                 # clear area x1
                 tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
                 # draw x1 value
@@ -539,8 +570,8 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 co2_color_last = color
 
         """scd30
-        Area:    Temperature
-        Coords:  x1
+        Area:    temperature, difference or heatindex
+        Coords:  x1, x2
         Scoring: heatindex
         """
         # next draw coord-y
@@ -577,8 +608,8 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 temp_last = temp
         
         """scd30
-        Area:   Humidity
-        Coords: x1
+        Area:   humidity, difference
+        Coords: x1, x2
         """
         # next draw coord
         line += 1
@@ -602,8 +633,8 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
                 hum_last = hum
         
         """bh1750
-        Area: Lux
-        Coords: x1
+        Area:   lux, difference
+        Coords: x1, x2
         """
         # next draw coord
         line += 1
@@ -691,14 +722,14 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         
         # gas or smoke warning
         if sensors.get('mq2'):
-            if sensor.mq2.data is not None:
+            if len(sensor.mq2.data) != 0:
                 # clear area
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
                 warning_cleared = True
                 # draw value
                 value = "Gas or Smoke detected"
                 tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("RED"))
-                sensor.mq2.data = None
+                sensor.mq2.data = {}
                 if nightmode != 1: await lightstrip.fade()
                 else: lightstrip.cycle(color="RED", times=2)
         
@@ -758,9 +789,9 @@ def date():
     t = localtime()
     return "{:02d}.{:02d}.{}".format(t[2], t[1], t[0])
 
-def date_as_int():
+def datetime():
     t = localtime()
-    return "{}{:02d}{:02d}".format(t[0], t[1], t[2])
+    return "{}{:02d}{:02d}{:02d}{:02d}{:02d}".format(t[0], t[1], t[2], t[3], t[4], t[5])
 
 def timestamp():
     return mktime(localtime())
@@ -913,9 +944,8 @@ def main():
         if tft.font is not None: display = True
     
     # show system status
-    if display: loop.create_task(displaySystemState(tft))
+    if display and not debug: loop.create_task(displaySystemState(tft))
     else: app.set('ready', True)
-#    app.set('ready', True)
     
     # Watchdog loops
     if hasattr(sensor, 'scd30'):
