@@ -50,7 +50,7 @@ Zum Anderen Teil beinhaltet das Projekt die Applikation für die vorgesehenen Au
 	
 	
 ## Core
-Wir der esp32 gestartet werden die Skripte boot.py und main.py nacheinander ausgeführt.
+Die Kernmodule beinhalten Funktionalitäten um die Basisfunktionen des esp32 parametergesteuert zu starten.
 
 ### Filesystem
 ```
@@ -68,6 +68,8 @@ Wir der esp32 gestartet werden die Skripte boot.py und main.py nacheinander ausg
 ```
 
 ### Boot
+Wir der esp32 gestartet werden die Skripte boot.py und main.py nacheinander ausgeführt.
+
 In der boot.py wird geprüft, ob die Datei boot.db existiert.
 Existiert die Datei nicht wird das Setup ausgeführt, über welches alle Konfigurationsdateien erneut geladen werden.
 
@@ -84,11 +86,10 @@ In der setup.py werden die Konfigurationsdateien eingelesen und derren Parameter
     # setConfig("/app/app.db", ["app.json", "tft.json", "sensors.json"], delete_json=False, delete_db=True)
 ```
 
-### Konfigurationsdateien
+#### Konfigurationsdateien
 
-#### Boot
+##### boot.json
 ```
-boot.json
 {
     "BOOT" : {
         "DEBUG"     : true
@@ -122,9 +123,8 @@ boot.json
 }
 ```
 
-#### Network
+##### network.json
 ```
-network.json
 {
     "default"      : {
             "essid"     : "router"
