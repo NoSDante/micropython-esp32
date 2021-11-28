@@ -1,8 +1,6 @@
 # micropython-esp32
 Mein DIY Projekt für den Einsatz eines esp32 mit micropython.
 
-Das Projekt endet, sofern mir keine sinnvolle Aufgabe mehr für den Mikrokontroller einfällt, was erstmal nicht der Fall ist oder dieser an seine Speicherkapazitäten stößt, mal sehen.
-
 ## Inhalt
 Das Projekt besteht zum einem aus den Kernmodulen, mit dennen der esp32 initialisiert wird.
 Zum Anderen Teil beinhaltet das Projekt die Applikation für die vorgesehenen Aufgaben des Mikrocontrollers.
