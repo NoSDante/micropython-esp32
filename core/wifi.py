@@ -92,21 +92,23 @@ def connect(essid=None, password='', store=False):
     # load wifi-config if essid is None
     if essid is None:
         cfg = get_network()
+        # fallback config from json-file
         if cfg is None: cfg = get_config()
         if cfg is None:
             print("no network config found")
             return
-        # set default wifi parameters from cfg
-        essid = str.encode(cfg['essid']).decode()       # string
-        password = str.encode(cfg['password']).decode() # string
-        static_ip = cfg['static_ip']                    # boolean
+        # set wifi parameters from cfg
+        essid = str.encode(cfg['essid']).decode()
+        password = str.encode(cfg['password']).decode()
+        static_ip = cfg['static_ip']
     else:
+        # save network in db-file
         if store: save_network(essid, password)
     
-    # load password from wifi-config if is None
+    # get password by essid
     if password is None and cfg is None:
         cfg = get_network(network=essid)
-        if cfg is None: cfg = get_config()
+        #if cfg is None: cfg = get_config()
         if cfg is None:
             print("no network config found")
             return        
@@ -118,6 +120,7 @@ def connect(essid=None, password='', store=False):
     wlan.active(True)
     wlan_essid = str.encode(wlan.config('essid')).decode()
     
+    # check if connection exists
     if wlan.isconnected() and (wlan_essid == essid):
         print('already connected with ' + essid)
         print('network:', wlan.ifconfig())
@@ -146,7 +149,7 @@ def connect(essid=None, password='', store=False):
         if not connected:
             print(' connecting failed')
     except Exception as e:
-        # Just print the error
+        # print error
         print(e)
 
 def disconnect():
@@ -168,7 +171,7 @@ def start_ap(essid="ESP32-AP", password="0000", max_clients=5):
         if not ap.active(): ap.active(True)
         ap.config(essid=essid, password=password, max_clients=max_clients)
     except Exception as e:
-        # Just print the error
+        # print error
         print("cannot start Access Point", e)
 
 def stop_ap():
@@ -179,6 +182,7 @@ def stop_ap():
     ap = WLAN(AP_IF)
     ap.active(False)
 
-def save_network(essid, password):
+def save_network(essid, password, network=None):
     print("save network")
-    Database(database="/network.db").save(essid, {'essid': essid, 'password': password})
+    if not network: network=essid
+    Database(database="/network.db").save(network, {'essid': essid, 'password': password})

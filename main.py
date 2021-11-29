@@ -36,7 +36,7 @@ def init():
             }
         }
     """
-    Default system params as fallback
+    Default system states
     bool: mounted:   is SD-Card mounted
     bool: timesync:  is time sync
     bool: ap:        start Access Point
@@ -62,14 +62,6 @@ def init():
         1 Power reboot
         2 External reset or wake-up from Deep-sleep
         4 Hardware WDT reset
-        -------------------------------------------
-        wake reason: return codes
-        0
-        1
-        2
-        3
-        4
-        -------------------------------------------
         """
         from machine import reset_cause, wake_reason
         print("\n----- MACHINE -----")
@@ -81,18 +73,14 @@ def init():
             for key, value in device.items(): print("{}: {}".format(key, value))
     
     """
-    TODO: find a better way...
-    First try to mount SDCard
-    Reset the board, if the device is busy (errno 16)
-    After reset the SDCard will mount
+    SDCard
     """
     if init.get("SDCARD"):
         from core.sdcard import mount
         mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
     
     """
-    Smart:   trys to connect each network saved in network.db
-    Default: connect to the default network saved in network.db or network.json
+    Network
     """
     if init.get("NETWORK"):
         print("\nnetwork...")
@@ -127,17 +115,18 @@ def init():
                     timesync = True
                     print('time synchronized')
                 except Exception as e:
-                    print('setting time failed')
+                    print('setting time failed', e)
                 """
-                Fallback: timeset by online host
+                timeset fallback
                 """
                 if not timesync:
+                    print('timeset fallback...')
                     try:
                         Timezone(utc).settime()
                         timesync = True
-                        print('time synchronized in fallback')
+                        print('time synchronized')
                     except Exception as e:
-                        print('setting time failed in fallback')
+                        print('setting time failed', e)
             elif ap_if:
                 ap_start = True
         elif network.get("AP"):
@@ -148,8 +137,7 @@ def init():
             if ip is not None: ap_ip_address = ip
     
     """
-    TODO:
-    Sync time by RTC
+    TODO: sync time by RTC
     """    
     if not timesync and boot.get("RTC"):
         print("TODO: sync time by RTC modul...")
@@ -157,7 +145,6 @@ def init():
     
     """
     Store states in db-file
-    db-file is global accessable
     """
     system = Database(SYSTEM_DATABASE, create=True)
     system.save("IP_ADDRESS", ip_address)

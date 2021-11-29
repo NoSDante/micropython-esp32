@@ -99,38 +99,51 @@ async def runLogger(sensor, config):
     LOG_TIME     = config.get("TIME")
     
     await asyncio.sleep(20)
-    data, i = [], 1
     
-    while 1:
-        tmp = {}
-        # log data to file
-        if time()[0:5] == LOG_TIME:
-            if debug: print("write file...")
-            data, i = [], 1
-            await asyncio.sleep(60-LOG_INTERVAL)
-        if debug: print("logging...")
-        if hasattr(sensor, 'scd30'):
-            if debug: print("log scd30 data")
-            tmp = sensor.scd30.data
-            tmp.update({"id": i, "sensor": "scd30", "timestamp": timestamp()})
-            data.append(tmp)
-        if hasattr(sensor, 'mq2'):
-            if debug: print("log mq2 data")
-            tmp = sensor.mq2.data
-            if len(tmp) != 0:
-                tmp.update({"id": i, "sensor": "mq2", "timestamp": timestamp()})
+    i, y_mq2 = 1, 1
+    data = []
+    
+    try:
+        while 1:
+            tmp = {}
+            # log data to file
+            if time()[0:5] == LOG_TIME:
+                if debug: print("write logfile...")
+                i, y_mq2 = 1, 1
+                data = []
+                #logfile()
+                #wait  = (60 - LOG_INTERVAL) if (60 - LOG_INTERVAL) > 0 else 60
+                await asyncio.sleep((60 - LOG_INTERVAL) if (60 - LOG_INTERVAL) > 0 else 60)
+            if debug: print("logging...")
+            if hasattr(sensor, 'scd30'):
+                if debug: print("log scd30 data")
+                tmp = sensor.scd30.data
+                tmp.update({"id": i, "sensor": "scd30", "timestamp": timestamp()})
                 data.append(tmp)
-        if hasattr(sensor, 'bh1750'):
-            if debug: print("log bh1750 data")
-            tmp = sensor.bh1750.data
-            tmp.update({"id": i, "sensor": "bh1750", "timestamp": timestamp()})
-            data.append(tmp)
-        if hasattr(sensor, 'sps30'):
-            print("log sps30 data")
-        print(i)
-        i += 1
-        await asyncio.sleep(LOG_INTERVAL)
-
+            if hasattr(sensor, 'mq2'):
+                if debug: print("log mq2 data")
+                tmp = sensor.mq2.data
+                if len(tmp) != 0:
+                    tmp.update({"id": y_mq2, "sensor": "mq2", "timestamp": timestamp()})
+                    data.append(tmp)
+                    print("{} mq2 logs at {}".format(y_mq2 ,time()))
+                    y_mq2 += 1
+            if hasattr(sensor, 'bh1750'):
+                if debug: print("log bh1750 data")
+                tmp = sensor.bh1750.data
+                tmp.update({"id": i, "sensor": "bh1750", "timestamp": timestamp()})
+                data.append(tmp)
+            if hasattr(sensor, 'sps30'):
+                if debug: print("log sps30 data")
+                tmp = sensor.sps30.data
+                tmp.update({"id": i, "sensor": "sps30", "timestamp": timestamp()})
+                data.append(tmp)
+            print("{} sensor logs at {}".format(i ,time()))
+            i += 1
+            await asyncio.sleep(LOG_INTERVAL)
+    except Exception as e:
+        app.set("error", "logging error," + e)
+    
 # AS3935 loop
 async def runWatchdogLightning(as3935, ligthstrip, interval=1):
     while 1:
@@ -163,6 +176,7 @@ async def runWatchdogGas(mq2, interval=1):
                 "time": time()
             }
             if debug: print("[MQ2]:", mq2.data)
+        else: mq2.data = {}
         await asyncio.sleep(interval)
 
 # BH1750 loop
@@ -197,10 +211,7 @@ async def runWatchdogCO2(scd30, interval=2):
             co2  = int(co2)
             temp = round(temp, 1)
             relh = int(relh)
-            print(co2)
-            print(temp)
-            print(temp)
-            if len(scd30.data) != 0 and co2 is not None and temp is not None:
+            if len(scd30.data) != 0:
                 if co2 < scd30.data.get("co2_min") or co2_min == 0: co2_min = co2
                 if co2 > scd30.data.get("co2_max"): co2_max = co2
                 if temp < scd30.data.get("temp_min"): temp_min = temp
@@ -230,7 +241,7 @@ async def runWatchdogCO2(scd30, interval=2):
                 print("[SCD30] CO2: {} ppm | Temp.: {:2.1f} °C | Hum.: {} % | max.".format(co2_max, temp_max, relh_max))
                 print("[SCD30] CO2: {} ppm | Temp.: {:2.1f} °C | Hum.: {} % | min.".format(co2_min, temp_min, relh_min))            
         except Exception as e:
-            scd30.data = {'error': 1}
+            scd30.data["error"] = 1
             if debug:
                 err_read += 1
                 print("SCD30 read error! counts {}, {}".format(err_read, e))
@@ -347,8 +358,8 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     
     await asyncio.sleep(interval)
     
-    # nightmode 2 = off
-    nightmode = 2
+    # nightmode 0 = off
+    nightmode = 0
     
     # init nightmode
     # -1 mode on, state undefined
@@ -356,6 +367,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     # TODO: is now between nightstart, nightend
     # 1 = on, 0 = off
     # nightmode = 1
+    if debug: print("nightmode", nightmode)
         
     # font width, heigt for calculating coords
     font_height, font_width = tft.font_height, tft.font_width
@@ -401,7 +413,7 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
     to get coord for the next text in line
     the declacred font-width seems to be the max-width of a letter
     letters need a different size of pixels - M an I for example
-    Declace static display areas |x|x1|x2|
+    Declare static display areas |x|x1|x2|
     """
     coord_x = START_X
     coord_x1, coord_x2 = 90, 210
@@ -455,8 +467,6 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         temp_last, temp_max_last, temp_min_last, hum_last = None, None, None, None
     if sensors.get('sps30'):
         sps30 = True
-        # define metrics
-        # init sensor values
     if sensors.get('bh1750'):
         # define metric
         metrics.append('Light.')
@@ -756,6 +766,9 @@ async def displaySensorData(tft, sensor, lightstrip, interval=2):
         if reset: reset_done = True
         reset = False
         
+        if debug:
+            if app.get("error"): print("error occured", app.get("error"))
+        
         """
         END: progressbar
         """
@@ -890,15 +903,18 @@ def main():
     
     del config
     
-    # Lightstrip
+    # LIGHTSTRIP
     lightstrip = Lightstrip(Pin(LIGHTSTRIP_DATA_PIN, Pin.OUT), pixel=LIGHTSTRIP_PIXEL)
     
     print("\nloops...")
     
-    # Async loops
+    # LOOPS
     loop = asyncio.get_event_loop()
     
-    # Initializing I2C sensors
+    # Lightstrip Demo
+    loop.create_task(runLightstripDemo(lightstrip))
+    
+    # SENSORS
     sensor = Sensors(i2c=None, debug=debug)
     
     # MQ2
@@ -909,9 +925,6 @@ def main():
             baseVoltage=MQ2_BASEVOLTAGE,
             calibrate=MQ2_CALIBRATE
         )
-    
-    # Lightstrip demo
-    loop.create_task(runLightstripDemo(lightstrip))
     
     # BH1750
     if BH1750_INIT: sensor.init_BH1750(i2c=None)
@@ -932,18 +945,18 @@ def main():
             disturber=AS3935_DISTURBER
         ))
         
+    # DISPLAY    
     display = False
-    # ILI9341
     if DISPLAY_INIT:
         print("\ndisplay initializing...")
         rotation = 90  # horizontal:90, vertical:0
-        # DISPLAY
+        # ILI9341
         tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=320, height=240, rotation=rotation, debug=debug)
         # FONT
         if tft is not None: tft.setFont(FONT_FILE, FONT_WIDTH, FONT_HEIGHT)
         if tft.font is not None: display = True
     
-    # show system status
+    # show system states
     if display and not debug: loop.create_task(displaySystemState(tft))
     else: app.set('ready', True)
     
