@@ -1,7 +1,6 @@
 # micropython-esp32
 Mein DIY Projekt für den Einsatz eines esp32 mit micropython.
 
-
 ## Inhalt
 Das Projekt besteht zum einem aus den Kernmodulen, mit dennen der esp32 initialisiert wird.
 Zum Anderen Teil beinhaltet das Projekt die Applikation für die vorgesehenen Aufgaben des Mikrocontrollers.
@@ -53,7 +52,7 @@ Wir der esp32 gestartet werden die Skripte boot.py und main.py ausgeführt.
 
 Das Laden der Konfigurationsdateien und Speichern der Parameter ist in der boot.py ausgelagert.\
 Im Skript main.py werden die esp-Funktionen mittels Konfigurationsparameter initialisiert.
-Sind keine Konfigurationdateien bzw. Parameter vorhanden, werden Default-Parameter verwendet.
+
 
 ### Filesystem
 ```
