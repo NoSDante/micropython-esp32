@@ -1,5 +1,6 @@
 # micropython-esp32
-Mein DIY Projekt für den Einsatz eines esp32 mit micropython.
+Mein DIY Projekt für den Einsatz eines esp32 mit micropython.\
+![Display_Sensors](https://user-images.githubusercontent.com/91437265/144920786-8a60ea24-bfb9-463e-80cc-e4714e166f22.jpg)
 
 ## Inhalt
 Das Projekt besteht zum einem aus den Kernmodulen, mit dennen der esp32 initialisiert wird.
