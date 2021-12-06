@@ -1,4 +1,5 @@
 /config_debug
+/app/test.py
 /config/network_copy.json
 /www/microweb
 *.db

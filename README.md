@@ -21,6 +21,8 @@ Zum Anderen Teil beinhaltet das Projekt die Applikation für die vorgesehenen Au
 * Status der esp-Funktionen speichern
 
 ### App
+<details><summary>Show more</summary>
+
 
 * Sensoren:		Klasse zur Initialisierung von Sensoren mit I2C, UART
 * Scoring:		Klasse zur Auswertung der Sensoren-Messwerte
@@ -45,7 +47,13 @@ Zum Anderen Teil beinhaltet das Projekt die Applikation für die vorgesehenen Au
 	* Ausgabe von min. und max. Werten für Temperatur, CO2
 	* Ausgabe der Differenz zum letzten Messwert
 	* Zeitgesteuertes Zurücksetzen der min. und max. Werte
-	
+</details>	
+
+## Getting Started
+
+### Tools
+
+### Micropython
 
 ## Core
 Wir der esp32 gestartet werden die Skripte boot.py und main.py ausgeführt.
@@ -70,13 +78,13 @@ Im Skript main.py werden die esp-Funktionen mittels Konfigurationsparameter init
 ```
 
 ### Boot
-In der boot.py wird geprüft, ob die Datei boot.db existiert.\
+In der ```boot.py``` wird geprüft, ob die Datei boot.db existiert.\
 Existiert die Datei nicht wird das Setup ausgeführt, über welches alle Konfigurationsdateien erneut geladen werden.
 
 ### Setup
-In der setup.py werden die Konfigurationsdateien eingelesen und die enthaltenen Daten in dem übergebenem binary-File überführt.\
+In der ```setup.py``` werden die Konfigurationsdateien eingelesen und die enthaltenen Daten in dem übergebenem binary-File überführt.\
 Das Setup kann ggf. mit weiteren Konfigurationsdateien ergänzt werden.
-```
+```python
 # boot config
 setConfig("/boot.db", ["boot.json"])
 
@@ -90,7 +98,7 @@ setConfig("/network.db", ["network.json"], delete_json=False, delete_db=True)
 #### Konfigurationsdateien
 
 ##### Boot
-In der Datei ```boot.json``` werden die Konfigurationsdateien definiert, mit dennen die esp-Funktionen initialisiert werden.
+In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert, mit dennen die esp-Funktionen initialisiert werden.
 
 ```
 ├── config
@@ -116,57 +124,62 @@ In der Datei ```boot.json``` werden die Konfigurationsdateien definiert, mit den
 | NETWORK    | AP_IF     | boolean | false     | Access Point als Fallback initialisieren (WiFi not connected)                         |
 | NETWORK    | AP        | boolean | true      | Access Point initialisieren                                                           |
 
-##### Network
-In der Datei ```network.json``` werden die Neztwerkverbindungen gespeichert.
-Zur Verwendung der Neztwerfunktionen muss der Parameter ```NETWORK=true``` gesetzt sein.
+##### Networks
+In der Konfigurationsdatei ```network.json``` werden die Neztwerkverbindungen gespeichert.
 ```
 ├── config
 │   └── network.json
 ```
-
-<details>
-  <summary>network.json</summary>
+<details><summary>network.json</summary>
 <p>
-```yaml
-{
-    "default"      : {
-            "essid"     : "router"
-            "password"  : "7612536812763"
-            "static_ip" : false
-            "ip"        : "192.168.2.1"
-            "subnet"    : "255.255.255.0"
-            "gateway"   : "192.168.2.1"
-            "dns"       : "192.168.2.1"
-     },
-     "WLAN-001" : {
-            "essid"     : "WLAN-001"
-            "password"  : "09128309809"
-            "static_ip" : true
-            "ip"        : "192.168.2.1"
-            "subnet"    : "255.255.255.0"
-            "gateway"   : "192.168.2.1"
-            "dns"       : "192.168.2.1"
-      },
-     "Hotspot" : {
-            "essid"     : "Hotspot"
-            "password"  : "9812739812"
-      }
-}
-```
+
+    ```
+    {
+		"default"      : {
+				"essid"     : "router"
+				"password"  : "7612536812763"
+				"static_ip" : false
+				"ip"        : "192.168.2.1"
+				"subnet"    : "255.255.255.0"
+				"gateway"   : "192.168.2.1"
+				"dns"       : "192.168.2.1"
+		 },
+		 "WLAN-001" : {
+				"essid"     : "WLAN-001"
+				"password"  : "09128309809"
+				"static_ip" : true
+				"ip"        : "192.168.2.1"
+				"subnet"    : "255.255.255.0"
+				"gateway"   : "192.168.2.1"
+				"dns"       : "192.168.2.1"
+		  },
+		 "Hotspot" : {
+				"essid"     : "Hotspot"
+				"password"  : "9812739812"
+		  }
+	}
+	```
+
 </p>
 </details>
 
+##### NETWORK
+Zur Verwendung der Neztwerfunktionen muss der Parameter ```NETWORK=true``` im Objekt ```BOOT``` gesetzt sein.
 
-#### WiFi
-Zur Initialisierung einer drahtlosen Neztwerkverbindungen muss der Parameter ```WIFI=true``` gesetzt sein.
-Ist der Parameter ```SMART=true``` gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und im ersten Trefferfall eine Verbindung hergestellt.\
-Wird die WiFi-Verbindung nicht ```SMART``` initialisiert, muss im Objekt "default" ein Standardnetzwerk definiert sein.
+
+#### WIFI
+Zur Initialisierung einer drahtlosen Neztwerkverbindung muss der Parameter ```WIFI=true``` im Objekt ```NETWORK``` gesetzt sein.
+##### SMART
+Ist der Parameter ```SMART=true``` zusätzlich gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und im ersten Trefferfall eine Verbindung hergestellt.\
+Wird die WiFi-Verbindung nicht ```SMART``` initialisiert, muss eine ```default``` Neztwerkverbindung in der Konfigurationsdatei ```network.json```definiert sein.
 
 #### Access Point
 
+##### AP
+Zur Initialisierung des Access Point muss der Parameter ```AP=true``` gesetzt sein.
 
-
-
+##### AP_IF
+Der Access Point wird mittels Parameter ```AP_IF=true``` als Fallback initialisiert, wenn eine drahtlose Neztwerkverbindung nicht hergestellt werden konnte.
 
 ### Main
 
