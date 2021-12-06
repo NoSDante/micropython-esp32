@@ -57,7 +57,7 @@ def init():
     
     if debug:
         """
-        reset cause return codes
+        reset, wake return codes
         0 Undefined
         1 Power reboot
         2 External reset or wake-up from Deep-sleep
@@ -127,10 +127,7 @@ def init():
                         timesync = True
                         print('time synchronized')
                     except Exception as e:
-                        print('setting time failed', e)
-            """
-            Access Point
-            """            
+                        print('setting time failed', e)          
             elif ap_if:
                 ap_start = True
         elif network.get("AP"):
@@ -141,14 +138,28 @@ def init():
             if ip is not None: ap_ip_address = ip
     
     """
-    TODO: sync time by RTC
+    TODO: timeset RTC
     """    
     if not timesync and boot.get("RTC"):
-        print("TODO: sync time by RTC modul...")
-        print("MODUL:", boot.get("RTC").get("MODUL"))
-    
+        from machine import I2C, Pin
+        i2c = I2C(
+            boot.get("I2C").get("SLOT"),
+            scl=Pin(boot.get("I2C").get("SCL")),
+            sda=Pin(boot.get("I2C").get("SDA"))
+        )
+        modul = boot.get("RTC").get("MODUL")
+        if debug: print("RTC:", modul)
+        if modul == "ds1307":
+            try: from lib.ds1307 import DS1307
+            except ImportError as e:
+                print("cannot import module", e)
+            ds1307 = DS1307(i2c)
+            print(ds1307.datetime())
+        else:
+            print("unknown RTC modul", modul)
+  
     """
-    Store states in db-file
+    Store states
     """
     system = Database(SYSTEM_DATABASE, create=True)
     system.save("IP_ADDRESS", ip_address)
