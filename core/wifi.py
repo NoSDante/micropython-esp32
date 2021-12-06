@@ -146,15 +146,14 @@ def connect(essid=None, password='', store=False):
                 break
             sleep_ms(500)
             print('.', end='')
-        if not connected:
-            print(' connecting failed')
+        if not connected: print(' connecting failed')
     except Exception as e:
         # print error
         print(e)
 
 def disconnect():
     """
-    Disconnect from Network
+    Disconnect network
     """
     print('disconnect from network')
     wlan = WLAN(STA_IF)
@@ -163,7 +162,7 @@ def disconnect():
 
 def start_ap(essid="ESP32-AP", password="0000", max_clients=5):
     """
-    Set up a WiFi-Access Point so that you can initially connect to the device and configure it.
+    Set Access Point
     """
     print("start Access Point")
     try:
@@ -171,12 +170,11 @@ def start_ap(essid="ESP32-AP", password="0000", max_clients=5):
         if not ap.active(): ap.active(True)
         ap.config(essid=essid, password=password, max_clients=max_clients)
     except Exception as e:
-        # print error
-        print("cannot start Access Point", e)
+        print(e)
 
 def stop_ap():
     """
-    stop Access Point
+    Stop Access Point
     """
     print("stop Access Point")
     ap = WLAN(AP_IF)

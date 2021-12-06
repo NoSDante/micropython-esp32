@@ -1,6 +1,7 @@
 from machine import Pin
 from time import sleep, sleep_ms, localtime, mktime, ticks_ms, ticks_diff
 import uasyncio as asyncio
+import gc
 
 # Core libs
 from core.database import Database
@@ -22,14 +23,14 @@ state = Store(
     timesync = system.get("TIMESYNC"),
     sdcard = system.get("SDCARD"),
     wifi = system.get("WIFI"),
+    smart = system.get("SMART"),
     connected = system.get("CONNECTED"),
     ap = system.get("AP"),
     ap_if = system.get("AP_IF")
 )
 app = Store(
     ready = False,
-    nightmode = False,
-    lightshow = 0
+    nightmode = False
 )
 sensors = Store(
     scd30 = False,
@@ -41,26 +42,30 @@ sensors = Store(
 
 # Lightstrip Demo
 async def runLightstripDemo(lightstrip):
+    for i in range(4):
+        #await lightstrip.each(1, color="DARK ORANGE", wait=500)
+        lightstrip.each(1, color="DARK ORANGE", clear=False)
+        await asyncio.sleep_ms(500)
+        lightstrip.clear()
+        #await lightstrip.each(2, color="DARK ORANGE", wait=500)
+        lightstrip.each(2, color="DARK ORANGE", clear=False)
+        await asyncio.sleep_ms(500)
+        lightstrip.clear()    
     while not app.get('ready'):
-        lightstrip.each( 1, color="DARK ORANGE", clear=False)
-        await asyncio.sleep(0.5)
-        lightstrip.clear()
-        lightstrip.each( 2, color="DARK ORANGE", clear=False)
-        await asyncio.sleep(0.5)
-        lightstrip.clear()
+        await asyncio.sleep_ms(500)
     await lightstrip.bounce(color="GREEN")
 
 # WiFi loop
 async def runReconnect(interval=3600, interval_if=600, retrys=3):
     retry = 0
-    from core.wifi import smart_connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
+    from core.wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
     while interval > 0:
         await asyncio.sleep(interval)
         if debug: print('network' , end=' ')
         if state.get('wifi') and not is_connected():
             print('reconnecting...')
-            smart_connect()
-            #connect()
+            if state.get('smart'): smart_connect()
+            else: connect()
             if is_connected():
                 if state.get('ap_if') and retry == retrys:
                     stop_ap()
@@ -73,7 +78,7 @@ async def runReconnect(interval=3600, interval_if=600, retrys=3):
                     from ntptime import settime
                     from core.timezone import Timezone
                     settime()
-                    Timezone(state.get('utc')).offset()          
+                    Timezone(state.get('utc')).offset()   
                     state.set('timesync', True)
                     if debug: print('time synchronized')
             else:
@@ -81,7 +86,7 @@ async def runReconnect(interval=3600, interval_if=600, retrys=3):
                 state.set("ip_address", "0.0.0.0")
                 if retry == 0: interval = interval_if
                 if retry != retrys: retry += 1
-            # Start Access Point as fallback when reaching retrys
+            # Start Access Point as fallback when reaching max retrys
             if retry == retrys and state.get('ap_if'):
                 start_ap()
                 state.set("ap_ip_address", get_ap_ip())
@@ -98,60 +103,59 @@ async def runLogger(sensor, config):
     LOG_TOSDCARD = config.get("TOSDCARD")
     LOG_TIME     = config.get("TIME")
     
-    await asyncio.sleep(20)
+    await asyncio.sleep(LOG_INTERVAL)
     
-    i, y_mq2 = 1, 1
+    i, y = 1, 1
     data = []
-    
-    try:
-        while 1:
+            
+    while 1:
+        try:
+            gc.collect()
             tmp = {}
             # log data to file
             if time()[0:5] == LOG_TIME:
                 if debug: print("write logfile...")
-                i, y_mq2 = 1, 1
-                data = []
+                i, y = 1, 1
+                data = [] 
                 #logfile()
-                #wait  = (60 - LOG_INTERVAL) if (60 - LOG_INTERVAL) > 0 else 60
                 await asyncio.sleep((60 - LOG_INTERVAL) if (60 - LOG_INTERVAL) > 0 else 60)
             if debug: print("logging...")
             if hasattr(sensor, 'scd30'):
-                if debug: print("log scd30 data")
-                tmp = sensor.scd30.data
-                tmp.update({"id": i, "sensor": "scd30", "timestamp": timestamp()})
+                tmp = {"scd30": { "id": i, "timestamp": timestamp()}}
+                tmp["scd30"].update(sensor.scd30.data)
                 data.append(tmp)
             if hasattr(sensor, 'mq2'):
-                if debug: print("log mq2 data")
-                tmp = sensor.mq2.data
-                if len(tmp) != 0:
-                    tmp.update({"id": y_mq2, "sensor": "mq2", "timestamp": timestamp()})
+                if len(sensor.mq2.data) != 0:
+                    tmp = {"mq2": { "id": y, "timestamp": timestamp()}}
+                    tmp["mq2"].update(sensor.mq2.data)
                     data.append(tmp)
-                    print("{} mq2 logs at {}".format(y_mq2 ,time()))
-                    y_mq2 += 1
+                    print("{} mq2 logs at {}".format(y ,time()))
+                    y += 1
             if hasattr(sensor, 'bh1750'):
-                if debug: print("log bh1750 data")
-                tmp = sensor.bh1750.data
-                tmp.update({"id": i, "sensor": "bh1750", "timestamp": timestamp()})
+                tmp = {"bh1750": { "id": i, "timestamp": timestamp()}}
+                tmp["bh1750"].update(sensor.bh1750.data)
                 data.append(tmp)
             if hasattr(sensor, 'sps30'):
-                if debug: print("log sps30 data")
-                tmp = sensor.sps30.data
-                tmp.update({"id": i, "sensor": "sps30", "timestamp": timestamp()})
+                tmp = {"sps30": { "id": i, "timestamp": timestamp()}}
+                tmp["sps30"].update(sensor.sps30.data)
                 data.append(tmp)
+            if debug: print("free memory:", gc.mem_free())
             print("{} sensor logs at {}".format(i ,time()))
             i += 1
-            await asyncio.sleep(LOG_INTERVAL)
-    except Exception as e:
-        app.set("error", "logging error," + e)
-    
+        except Exception as e:
+            error = "logging error at {} logs: {}".format(i, e)
+            if debug: print(error)
+            app.set("error", error)
+        await asyncio.sleep(LOG_INTERVAL)
+
 # AS3935 loop
 async def runWatchdogLightning(as3935, ligthstrip, interval=1):
     while 1:
         if as3935.trigger() == 0:
             if debug: print("[AS3935] Lightning detected")
             as3935.data = {
-                "Lightning Distance": await as3935.getLightningDistKm(),
-                "Strike Energy": await as3935.getStrikeEnergyRaw(),
+                "lightningdistance": await as3935.getLightningDistKm(),
+                "strikeenergy": await as3935.getStrikeEnergyRaw(),
                 "time": time(),
                 "date": date()
             }
@@ -269,10 +273,7 @@ async def runWatchdogDust(sps30, interval=2):
 
 # Display system states
 async def displaySystemState(tft):
-    
-    app.set('ready', False)
-    boot = Database("/boot.db")
-    
+        
     font_height = tft.font_height
     font_width = tft.font_width
 
@@ -347,14 +348,11 @@ async def displaySystemState(tft):
     
     await progressbar()
     
-    # del database object
-    del boot
-    
     # ready for main loop
     app.set('ready', True)
 
 # Display loop
-async def displaySensorData(tft, sensor, lightstrip, interval=2):
+async def displayMainLoop(tft, sensor, lightstrip, interval=2):
     
     await asyncio.sleep(interval)
     
@@ -906,13 +904,7 @@ def main():
     # LIGHTSTRIP
     lightstrip = Lightstrip(Pin(LIGHTSTRIP_DATA_PIN, Pin.OUT), pixel=LIGHTSTRIP_PIXEL)
     
-    print("\nloops...")
-    
-    # LOOPS
-    loop = asyncio.get_event_loop()
-    
-    # Lightstrip Demo
-    loop.create_task(runLightstripDemo(lightstrip))
+    print("\nSensors...")
     
     # SENSORS
     sensor = Sensors(i2c=None, debug=debug)
@@ -934,7 +926,16 @@ def main():
     
     # SPS30
     if SPS30_INIT: sensor.init_SPS30(port=SPS30_PORT, rx=SPS30_RX, tx=SPS30_TX, start=SPS30_START, clean=SPS30_CLEAN, sample=SPS30_SAMPLE)
+        
+    print("\nloops...")
     
+    # LOOPS
+    loop = asyncio.get_event_loop()
+    
+    # Lightstrip Demo
+    loop.create_task(runLightstripDemo(lightstrip))
+    
+
     # AS3935
     if AS3935_INIT:
         loop.create_task(sensor.init_AS3935(
@@ -953,13 +954,13 @@ def main():
         # ILI9341
         tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=320, height=240, rotation=rotation, debug=debug)
         # FONT
-        if tft is not None: tft.setFont(FONT_FILE, FONT_WIDTH, FONT_HEIGHT)
-        if tft.font is not None: display = True
+        if tft: tft.setFont(FONT_FILE, FONT_WIDTH, FONT_HEIGHT)
+        if tft.font: display = True
     
     # show system states
     if display and not debug: loop.create_task(displaySystemState(tft))
     else: app.set('ready', True)
-    
+        
     # Watchdog loops
     if hasattr(sensor, 'scd30'):
         sensors.set('scd30', True)
@@ -987,7 +988,7 @@ def main():
     loop.run_until_complete(waitfor_ready())
     
     # Display loop
-    if display: loop.create_task(displaySensorData(tft, sensor, lightstrip, interval=DISPLAY_INTERVAL))
+    if display: loop.create_task(displayMainLoop(tft, sensor, lightstrip, interval=DISPLAY_INTERVAL))
     
     # Tasks loop forever
     loop.run_forever()

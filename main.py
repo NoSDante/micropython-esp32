@@ -46,7 +46,7 @@ def init():
     int:  utc:       set a timezone
     int:  reconnect: time for WiFi try-reconnecting loop 0=off
     """
-    debug, mounted, wifi, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False
+    debug, mounted, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
     ip_address, ap_ip_address = "0.0.0.0", "0.0.0.0"
     reconnect, utc = 0, 0
     
@@ -93,8 +93,9 @@ def init():
             wifi = True
             reconnect = network.get("RECONNECT")
             timezone = boot.get("TIMEZONE")
-            utc = timezone.get("UTC")
-            if network.get("SMART"): smart_connect()
+            if timezone: utc = timezone.get("UTC")
+            smart = network.get("SMART")
+            if smart: smart_connect()
             else: connect()
             if is_connected():
                 connected = True
@@ -106,7 +107,7 @@ def init():
                 from core.timezone import Timezone
                 if debug: print("timezone:", timezone.get("ZONE"))
                 """
-                timeset by ntptime modul
+                timeset ntptime
                 """
                 try:
                     from ntptime import settime
@@ -127,6 +128,9 @@ def init():
                         print('time synchronized')
                     except Exception as e:
                         print('setting time failed', e)
+            """
+            Access Point
+            """            
             elif ap_if:
                 ap_start = True
         elif network.get("AP"):
@@ -152,6 +156,7 @@ def init():
     system.save("DEBUG", debug)
     system.save("SDCARD", mounted)
     system.save("WIFI", wifi)
+    system.save("SMART", smart)
     system.save("CONNECTED", connected)
     system.save("RECONNECT", reconnect)
     system.save("AP", ap)

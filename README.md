@@ -119,14 +119,21 @@ In der Datei ```boot.json``` werden die Konfigurationsdateien definiert, mit den
 ##### Network
 In der Datei ```network.json``` werden die Neztwerkverbindungen gespeichert.
 
-Zur Initialisierung der Neztwerkverbindung muss der Parameter ```WIFI=true``` gesetzt sein.
-Ist der Parameter ```SMART=true``` gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und im Trefferfall eine Verbindung hergestellt.\
+Zur Verwendung der Neztwerfunktionen muss der Parameter ```NETWORK=true``` gesetzt sein.
+
+#### WiFi
+Zur Initialisierung einer drahtlosen Neztwerkverbindungen muss der Parameter ```WIFI=true``` gesetzt sein.
+Ist der Parameter ```SMART=true``` gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und im ersten Trefferfall eine Verbindung hergestellt.\
 Wird die WiFi-Verbindung nicht ```SMART``` initialisiert, muss im Objekt "default" ein Standardnetzwerk definiert sein.
+
+#### Access Point
+
 ```
 ├── config
 │   └── network.json
 ```
-Beispiel für ```network.json```
+<details>
+  <summary>Beispiel für ```network.json```</summary>
 ```
 {
     "default"      : {
@@ -153,6 +160,9 @@ Beispiel für ```network.json```
       }
 }
 ```
+</details>
+
+
 
 ### Main
 
