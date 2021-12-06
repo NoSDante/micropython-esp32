@@ -84,7 +84,7 @@ Existiert die Datei nicht wird das Setup ausgeführt, über welches alle Konfigu
 ### Setup
 In der ```setup.py``` werden die Konfigurationsdateien eingelesen und die enthaltenen Daten in dem übergebenem binary-File überführt.\
 Das Setup kann ggf. mit weiteren Konfigurationsdateien ergänzt werden.
-```
+```python
 # boot config
 setConfig("/boot.db", ["boot.json"])
 
