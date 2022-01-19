@@ -15,8 +15,8 @@
         "TYPE"   : "ESP32-WROVER"
         "BRAND"  : "Tonysa"
         "MODEL"  : "TTGO T8 V1.7.1"
-        "PSRAM"  : "8 MB"
-        "FLASH"  : "4 MB"
+        "PSRAM"  : "8MB"
+        "FLASH"  : "4MB"
         "SDCARD" : "Mount on SPI Slot 1"
         "SDSLOT" : "Slot 1 mosi=15, sck=14, dat1=4, dat2=12"
         "SDPINS" : "Pins cs=13, miso=2"
@@ -28,7 +28,6 @@
         "PATH" : "/sd"
     },
     "RTC" : {
-        "INIT"  : false
         "MODUL" : "DS1307"
     },
     "NETWORK" : {

@@ -47,7 +47,7 @@ def init():
     int:  reconnect: time for WiFi try-reconnecting loop 0=off
     """
     debug, mounted, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
-    ip_address, ap_ip_address = "0.0.0.0", "0.0.0.0"
+    ip_address, ap_ip_address, rtc_modul = "0.0.0.0", "0.0.0.0", ""
     reconnect, utc = 0, 0
     
     """
@@ -138,23 +138,28 @@ def init():
             if ip is not None: ap_ip_address = ip
     
     """
-    TODO: timeset RTC
-    """    
+    RTC
+    """
     if not timesync and boot.get("RTC"):
-        from machine import I2C, Pin
-        i2c = I2C(
-            boot.get("I2C").get("SLOT"),
-            scl=Pin(boot.get("I2C").get("SCL")),
-            sda=Pin(boot.get("I2C").get("SDA"))
-        )
         modul = boot.get("RTC").get("MODUL")
         if debug: print("RTC:", modul)
-        if modul == "ds1307":
+        if modul.lower() == "ds1307":
+            rtc_modul = "ds1307"
             try: from lib.ds1307 import DS1307
             except ImportError as e:
                 print("cannot import module", e)
+            from machine import I2C, Pin
+            i2c = I2C(
+                boot.get("I2C").get("SLOT"),
+                scl=Pin(boot.get("I2C").get("SCL")),
+                sda=Pin(boot.get("I2C").get("SDA"))
+            )                
             ds1307 = DS1307(i2c)
+            rtc = True
+            if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
+                rtc_modul = "SETTIME"
             print(ds1307.datetime())
+            
         else:
             print("unknown RTC modul", modul)
   
@@ -175,6 +180,7 @@ def init():
     system.save("TIMESYNC", timesync)
     system.save("UTC", utc)
     system.save("RTC", rtc)
+    system.save("RTC_MODUL", rtc_modul)
     
     if debug:
         print("\n----- SYSTEM -----")
