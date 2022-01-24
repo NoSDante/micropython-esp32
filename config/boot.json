@@ -1,10 +1,5 @@
 {
-    "BOOT" : {
-        "DEBUG"     : true
-        "NETWORK"   : true
-        "SDCARD"    : false
-        "BLUETOOTH" : false
-    },
+    "DEBUG"   : true,
     "TIMEZONE": {
         "UTC"     : 1
         "ZONE"    : "MESZ - Mitteleuropäische Winterzeit (UTC+1)"
@@ -21,7 +16,7 @@
         "SDSLOT" : "Slot 1 mosi=15, sck=14, dat1=4, dat2=12"
         "SDPINS" : "Pins cs=13, miso=2"
     },
-    "SDCARD" : {
+    "SDCARD_OFF" : {
         "SPI"  : 1
         "CS"   : 13
         "MOSI" : 2
@@ -34,9 +29,9 @@
         "RECONNECT" : 7200
         "DATABASE"  : "/network.db"
         "DEFAULT"   : "default"
-        "WIFI"      : true
+        "WIFI"      : false
         "SMART"     : true
-        "AP_IF"     : true
+        "AP_IF"     : false
         "AP"        : false
     },
      "I2C" : {

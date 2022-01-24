@@ -18,16 +18,10 @@ def init():
     """
     try:
         boot = Database(BOOT_DATABASE)
-        init = boot.get("BOOT")
     except:
         print("boot config missing")
-        init = {
-            "DEBUG": False,
-            "NETWORK": True,
-            "SDCARD": False,
-            "BLUETOOTH": False
-        }
         boot = {
+            "DEBUG": False,
             "NETWORK":
             {
                 "WIFI": False,
@@ -35,6 +29,7 @@ def init():
                 "AP": True
             }
         }
+        
     """
     Default system states
     bool: mounted:   is SD-Card mounted
@@ -51,9 +46,9 @@ def init():
     reconnect, utc = 0, 0
     
     """
-    Debug modus
+    DEBUG
     """
-    debug = init.get("DEBUG")
+    debug = boot.get("DEBUG")
     
     if debug:
         """
@@ -75,14 +70,14 @@ def init():
     """
     SDCard
     """
-    if init.get("SDCARD"):
-        from core.sdcard import mount
-        mounted = mount(path=boot.get("SDCARD").get("PATH"), debug=debug)
+    if boot.get("SDCARD"):
+        from core.sdcard import mounting
+        mounted = mounting(path=boot.get("SDCARD").get("PATH"), debug=debug)
     
     """
-    Network
+    NETWORK
     """
-    if init.get("NETWORK"):
+    if boot.get("NETWORK"):
         print("\nnetwork...")
         from core.wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
         network = boot.get("NETWORK")
@@ -141,30 +136,36 @@ def init():
     RTC
     """
     if not timesync and boot.get("RTC"):
-        modul = boot.get("RTC").get("MODUL")
-        if debug: print("RTC:", modul)
-        if modul.lower() == "ds1307":
-            rtc_modul = "ds1307"
+        rtc_modul = boot.get("RTC").get("MODUL")
+        if debug: print("RTC Modul:", rtc_modul)
+        if rtc_modul.lower() == "ds1307":
             try: from lib.ds1307 import DS1307
             except ImportError as e:
                 print("cannot import module", e)
-            from machine import I2C, Pin
+            from machine import I2C, Pin, RTC
             i2c = I2C(
                 boot.get("I2C").get("SLOT"),
                 scl=Pin(boot.get("I2C").get("SCL")),
                 sda=Pin(boot.get("I2C").get("SDA"))
-            )                
+            )
             ds1307 = DS1307(i2c)
             rtc = True
             if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
                 rtc_modul = "SETTIME"
-            print(ds1307.datetime())
-            
+            else:
+                # probably correct
+                if debug: print(rtc_modul, ds1307.datetime())
+                dt = ds1307.datetime()
+                #( year,month,day,weekday,hour,minute,second,microsecond )
+                RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
+                timesync = True
+                if debug: print("RTC", RTC().datetime())            
         else:
-            print("unknown RTC modul", modul)
+            rtc_modul = "UNKNOWN"
+            print("unknown RTC modul", rtc_modul)
   
     """
-    Store states
+    Save states
     """
     system = Database(SYSTEM_DATABASE, create=True)
     system.save("IP_ADDRESS", ip_address)

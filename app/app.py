@@ -111,9 +111,10 @@ async def runLogger(sensor, config):
     while 1:
         try:
             gc.collect()
+            mem_free_start = gc.mem_free()
             tmp = {}
             # log data to file
-            if time()[0:5] == LOG_TIME:
+            if time()[0:5] == LOG_TIME or gc.mem_free() < (mem_free_start//2):
                 if debug: print("write logfile...")
                 i, y = 1, 1
                 data = [] 
