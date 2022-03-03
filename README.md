@@ -105,6 +105,57 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 ├── config
 │   └── boot.json
 ```
+<details><summary>boot.json</summary>
+<p>
+	
+	```
+	{
+	    "DEBUG"   : true,
+	    "TIMEZONE": {
+		"UTC"     : 1,
+		"ZONE"    : "MESZ - Mitteleuropäische Winterzeit (UTC+1)",
+		"SUMMMER" : 3,
+		"WINTER"  : 10
+	    },
+	    "DEVICE" : {
+		"TYPE"   : "ESP32-WROVER",
+		"BRAND"  : "Tonysa",
+		"MODEL"  : "TTGO T8 V1.7.1",
+		"PSRAM"  : "8MB",
+		"FLASH"  : "4MB",
+		"SDCARD" : "Mount on SPI Slot 1",
+		"SDSLOT" : "Slot 1 mosi=15, sck=14, dat1=4, dat2=12",
+		"SDPINS" : "Pins cs=13, miso=2"
+	    },
+	    "SDCARD" : {
+		"SPI"  : 1,
+		"CS"   : 13,
+		"MOSI" : 2,
+		"PATH" : "/sd"
+	    },
+	    "RTC" : {
+		"MODUL" : "DS1307"
+	    },
+	    "NETWORK" : {
+		"RECONNECT" : 7200,
+		"DATABASE"  : "/network.db",
+		"DEFAULT"   : "default",
+		"WIFI"      : false,
+		"SMART"     : true,
+		"AP_IF"     : false,
+		"AP"        : false
+	    },
+	     "I2C" : {
+		"SLOT" : 1,
+		"SDA"  : 21,
+		"SCL"  : 22,
+		"FREQ" : 400000
+	    }
+	}
+	```
+</p>
+</details>
+
 | Objekt     | Parameter | Typ     | Default   | Funktion                                                                              |
 |------------|-----------|---------|-----------|---------------------------------------------------------------------------------------|
 |            | DEBUG     | boolean | false     | Im Debug Modus werden mehr Logausgaben erzeugt                                        |
@@ -117,6 +168,7 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 | SDCARD     | SPI       | integer | undefined | SPI Slot                                                                              |
 | SDCARD     | CS        | integer | undefined | CS-Pin                                                                                |
 | SDCARD     | MOSI      | integer | undefined | MOSI-Pin                                                                              |
+| SDCARD     | WIDTH     | integer | undefined | selects the bus width for the SD/MMC interface.                                       |
 | RTC        |           | object  | undefined | externes RTC Modul verwenden, falls keine Zeitsynchronisierung möglich                |
 | RTC        | MODUL     | string  | undefined | Name des RTC Modul                                                                    |
 | NETWORK    |           | object  | defined   | WiFi und/oder Access Point initialisieren                                             |
@@ -126,6 +178,8 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 | NETWORK    | AP_IF     | boolean | false     | Access Point als Fallback initialisieren (WiFi not connected)                         |
 | NETWORK    | AP        | boolean | true      | Access Point initialisieren                                                           |
 
+boot config is missing => default
+
 ##### Networks
 In der Konfigurationsdatei ```network.json``` werden die Neztwerkverbindungen gespeichert.
 ```
@@ -134,34 +188,33 @@ In der Konfigurationsdatei ```network.json``` werden die Neztwerkverbindungen ge
 ```
 <details><summary>network.json</summary>
 <p>
-
-    ```
-    {
-		"default"      : {
-				"essid"     : "router"
-				"password"  : "7612536812763"
-				"static_ip" : false
-				"ip"        : "192.168.2.1"
-				"subnet"    : "255.255.255.0"
-				"gateway"   : "192.168.2.1"
-				"dns"       : "192.168.2.1"
-		 },
-		 "WLAN-001" : {
-				"essid"     : "WLAN-001"
-				"password"  : "09128309809"
-				"static_ip" : true
-				"ip"        : "192.168.2.1"
-				"subnet"    : "255.255.255.0"
-				"gateway"   : "192.168.2.1"
-				"dns"       : "192.168.2.1"
-		  },
-		 "Hotspot" : {
-				"essid"     : "Hotspot"
-				"password"  : "9812739812"
-		  }
+	
+	```
+	{
+	    "default" : {
+		    "essid"     : "router",
+		    "password"  : "7612536812763",
+		    "static_ip" : false,
+		    "ip"        : "192.168.2.1",
+		    "subnet"    : "255.255.255.0",
+		    "gateway"   : "192.168.2.1",
+		    "dns"       : "192.168.2.1"
+	     },
+	     "WLAN-001" : {
+		    "essid"     : "WLAN-001",
+		    "password"  : "09128309809",
+		    "static_ip" : true,
+		    "ip"        : "192.168.2.1",
+		    "subnet"    : "255.255.255.0",
+		    "gateway"   : "192.168.2.1",
+		    "dns"       : "192.168.2.1"
+	      },
+	     "Hotspot" : {
+		    "essid"     : "Hotspot",
+		    "password"  : "9812739812"
+	      }
 	}
 	```
-
 </p>
 </details>
 
@@ -173,7 +226,7 @@ Zur Verwendung der Neztwerfunktionen müssen im Objekt ```NETWORK=true``` nachfo
 Zur Initialisierung einer drahtlosen Neztwerkverbindung muss der Parameter ```WIFI=true``` im Objekt ```NETWORK``` gesetzt sein.
 ##### SMART
 Ist der Parameter ```SMART=true``` zusätzlich gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und im ersten Trefferfall eine Verbindung hergestellt.\
-Wird die WiFi-Verbindung nicht ```SMART``` initialisiert, muss eine ```default``` Neztwerkverbindung in der Konfigurationsdatei ```network.json```definiert sein.
+Wird die WiFi-Verbindung nicht ```SMART=false``` initialisiert, muss eine ```default``` Neztwerkverbindung in der Konfigurationsdatei ```network.json```definiert sein.
 
 #### Access Point
 
