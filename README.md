@@ -107,19 +107,20 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 ```
 | Objekt     | Parameter | Typ     | Default   | Funktion                                                                              |
 |------------|-----------|---------|-----------|---------------------------------------------------------------------------------------|
-| BOOT       | DEBUG     | boolean | false     | Im Debug Modus werden mehr Logausgaben erzeugt                                        |
-| BOOT       | BLUETOOTH | boolean | false     | nicht implementiert                                                                   |
-| BOOT       | SDCARD    | boolean | false     | SD-Card im Filesystem einbinden (Parameter im Objekt SCDCARD erforderlich)            |
-| BOOT       | NETWORK   | boolean | true      | WiFi und/oder Access Point initialisieren (Parameter im Objekt NETWORK erforderlich)  |
+|            | DEBUG     | boolean | false     | Im Debug Modus werden mehr Logausgaben erzeugt                                        |
+|            | BLUETOOTH | boolean | ---       | nicht implementiert                                                                   |
+| TIMEZONE   |           | object  | undefined | Zeitsynchronisierung initialisieren                                                   |
 | TIMEZONE   | UTC       | integer | undefined | Zeitzone zur synchronisierung des internen RTC                                        |
 | TIMEZONE   | ZONE      | string  | undefined | Optional                                                                              |
+| SDCARD     |           | object  | undefined | SD-Card im Filesystem einbinden                                                       |
 | SDCARD     | PATH      | string  | undefined | Pfad zur SD-Card im Filesystem                                                        |
-| SDCARD     | SPI       | integer | undefined | SPI Slot (optional)                                                                   |
-| SDCARD     | CS        | integer | undefined | CS-Pin   (optional)                                                                   |
-| SDCARD     | MOSI      | integer | undefined | MOSI-Pin (optional)                                                                   |
-| RTC        | INIT      | boolean | undefined | externes RTC Modul verwenden, falls keine Zeitsynchronisierung möglich                |
-| RTC        | MODUL     | string  | undefined | Beschreibung des RTC (optional)                                                       |
-| NETWORK    | RECONNECT | integer | undefined | Interval zur WiFi Verbindungsprüfung, 0 = off                                         |
+| SDCARD     | SPI       | integer | undefined | SPI Slot                                                                              |
+| SDCARD     | CS        | integer | undefined | CS-Pin                                                                                |
+| SDCARD     | MOSI      | integer | undefined | MOSI-Pin                                                                              |
+| RTC        |           | object  | undefined | externes RTC Modul verwenden, falls keine Zeitsynchronisierung möglich                |
+| RTC        | MODUL     | string  | undefined | Name des RTC Modul                                                                    |
+| NETWORK    |           | object  | defined   | WiFi und/oder Access Point initialisieren                                             |
+| NETWORK    | RECONNECT | integer | undefined | Interval zur WiFi Verbindungsprüfung, 0 = off (use in Application)                    |
 | NETWORK    | WIFI      | boolean | false     | WiFi initialisieren                                                                   |
 | NETWORK    | SMART     | boolean | undefined | Ablgeich zwischen WLAN-Scan und gespeicherten Netzwerken zur Verbindungsherstellung   |
 | NETWORK    | AP_IF     | boolean | false     | Access Point als Fallback initialisieren (WiFi not connected)                         |
@@ -165,7 +166,7 @@ In der Konfigurationsdatei ```network.json``` werden die Neztwerkverbindungen ge
 </details>
 
 ##### NETWORK
-Zur Verwendung der Neztwerfunktionen muss der Parameter ```NETWORK=true``` im Objekt ```BOOT``` gesetzt sein.
+Zur Verwendung der Neztwerfunktionen müssen im Objekt ```NETWORK=true``` nachfolgende Parameter verwendet werden.
 
 
 #### WIFI
