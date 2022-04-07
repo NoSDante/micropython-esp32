@@ -46,21 +46,26 @@ class Database():
         self._close()
         return keys
 
-    def get(self, key, default=None, as_json=True):
+    def get(self, key=None, default=None, as_json=True):
         """
         Get value by key
         """
         if self.btree is None: raise self.NotDefinedException("database undefined")
         if isinstance(key, str): key = key.encode('utf8')
-        self._open()    
-        value = self.btree.get(key)
-        if value and as_json:
-            try: value = json.loads(value.decode('utf8'))
-            except ValueError: value = value.decode('utf-8')
-        elif not value: value = default
+        self._open()
+        if key:
+            value = self.btree.get(key)
+            if value and as_json:
+                try: value = json.loads(value.decode('utf8'))
+                except ValueError: value = value.decode('utf-8')
+            elif not value: value = default
+        else:
+            value = {}
+            for key in self.btree:
+                value.update( {key.decode('utf8') : self.btree.get(key).decode('utf8')} )
         self._close()
         return value
-
+    
     def save(self, key, value):
         """
         Save value by key

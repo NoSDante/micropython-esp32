@@ -27,7 +27,7 @@ print("save STRING:", "Test")
 print("save BOOLEAN:", True)
 print("save STRING:", 42)
 
-print("----- GET -----")
+print("----- GET KEY -----")
 """
 return value by key
 """
@@ -36,6 +36,13 @@ print(database.get("STRING"))
 print(database.get("BOOLEAN"))
 print(database.get("INTEGER"))
 print(database.get("DICTIONARY"))
+
+print("----- GET ALL -----")
+"""
+return object as json
+"""
+print(database.get())
+
 
 print("----- TYPES -----")
 """
