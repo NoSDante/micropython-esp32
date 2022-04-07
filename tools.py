@@ -44,11 +44,10 @@ def I2C_Test():
 def settime_DS1307():
     from lib.ds1307 import DS1307
     ds1307 = DS1307(I2C(I2C_SLOT))
-    if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
-        from machine import RTC
-        rtc = RTC()
-        now = rtc.datetime() # get date and time
-        ds1307.datetime(now)
+    from machine import RTC
+    rtc = RTC()
+    now = rtc.datetime() # get date and time
+    ds1307.datetime(now)
     print(ds1307.datetime())
 
 I2C_Test()
