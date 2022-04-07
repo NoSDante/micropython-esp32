@@ -41,7 +41,7 @@ def init():
     int:  utc:       set a timezone
     int:  reconnect: time for WiFi try-reconnecting loop 0=off
     """
-    debug, mounted, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
+    debug, sdcard, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
     ip_address, ap_ip_address, rtc_modul = "0.0.0.0", "0.0.0.0", ""
     reconnect, utc = 0, 0
     
@@ -72,7 +72,14 @@ def init():
     """
     if boot.get("SDCARD"):
         from core.sdcard import mounting
-        mounted = mounting(path=boot.get("SDCARD").get("PATH"), debug=debug)
+        sdcard = mounting(
+            slot=boot.get("SDCARD").get("SPI"),           
+            path=boot.get("SDCARD").get("PATH"),
+            width=boot.get("SDCARD").get("WIDTH"),
+            cs=boot.get("SDCARD").get("CS"),
+            miso=boot.get("SDCARD").get("MISO"),
+            debug=debug  
+            )
     
     """
     NETWORK
@@ -131,38 +138,44 @@ def init():
             start_ap()
             ip = get_ap_ip()
             if ip is not None: ap_ip_address = ip
-    
     """
     RTC
     """
-    if not timesync and boot.get("RTC"):
-        rtc_modul = boot.get("RTC").get("MODUL")
-        if debug: print("RTC Modul:", rtc_modul)
-        if rtc_modul.lower() == "ds1307":
-            try: from lib.ds1307 import DS1307
-            except ImportError as e:
-                print("cannot import module", e)
-            from machine import I2C, Pin, RTC
-            i2c = I2C(
-                boot.get("I2C").get("SLOT"),
-                scl=Pin(boot.get("I2C").get("SCL")),
-                sda=Pin(boot.get("I2C").get("SDA"))
-            )
+    if boot.get("RTC"):
+        from machine import I2C, Pin, RTC
+        i2c = I2C(
+            boot.get("I2C").get("SLOT"),
+            scl=Pin(boot.get("I2C").get("SCL")),
+            sda=Pin(boot.get("I2C").get("SDA"))
+        )        
+        try:
+            from lib.ds1307 import DS1307
             ds1307 = DS1307(i2c)
-            rtc = True
-            if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
-                rtc_modul = "SETTIME"
-            else:
-                # probably correct
-                if debug: print(rtc_modul, ds1307.datetime())
-                dt = ds1307.datetime()
-                #( year,month,day,weekday,hour,minute,second,microsecond )
-                RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
-                timesync = True
-                if debug: print("RTC", RTC().datetime())            
+        except ImportError as e:
+            print("cannot import module", e)
+        # synchronize RTC
+        if timesync:
+            ds1307.datetime(RTC().datetime())
+            if debug: print("synchronized RTC", ds1307.datetime())
         else:
-            rtc_modul = "UNKNOWN"
-            print("unknown RTC modul", rtc_modul)
+            # initialize RTC
+            rtc_modul = boot.get("RTC").get("MODUL")
+            if debug: print("RTC Modul:", rtc_modul)
+            if rtc_modul.lower() == "ds1307":
+                rtc = True
+                if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
+                    rtc_modul = "SETTIME"
+                else:
+                    # probably correct
+                    if debug: print(rtc_modul, ds1307.datetime())
+                    dt = ds1307.datetime()
+                    #( year,month,day,weekday,hour,minute,second,microsecond )
+                    RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
+                    timesync = True
+                    if debug: print("RTC", RTC().datetime())            
+            else:
+                rtc_modul = "UNKNOWN"
+                print("unknown RTC modul", rtc_modul)
   
     """
     Save states
@@ -171,7 +184,7 @@ def init():
     system.save("IP_ADDRESS", ip_address)
     system.save("AP_IP_ADDRESS", ap_ip_address)
     system.save("DEBUG", debug)
-    system.save("SDCARD", mounted)
+    system.save("SDCARD", sdcard)
     system.save("WIFI", wifi)
     system.save("SMART", smart)
     system.save("CONNECTED", connected)
@@ -193,3 +206,5 @@ init()
 # run app
 from app.app import main
 main()
+# from web import start_web
+# start_web()
