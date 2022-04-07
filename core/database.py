@@ -9,6 +9,9 @@ class Database():
     class NotDefinedException(Exception):
         pass
     
+    class ValueErrorException(Exception):
+        pass
+    
     def __init__(self, database="/micro.db", pagesize=1024, delete=False, create=False):
         self.btree = None
         self.create = create
@@ -70,6 +73,8 @@ class Database():
         """
         Save value by key
         """
+        if not value: raise self.ValueErrorException("value undefined")
+        if not key: raise self.ValueErrorException("key undefined")
         if self.btree is None: raise self.NotDefinedException("database undefined")
         self._open()
         self.btree[self.encode(key)] = self.encode(value)
@@ -77,12 +82,13 @@ class Database():
         self._close()
 
     def delete(self, key):
+        if not key: raise self.ValueErrorException("key undefined")  
         if self.btree is None: raise self.NotDefinedException("database undefined")
         """
         Delete key in tree
         """
         if self.get(key):
-            self._open()   
+            self._open()
             del self.btree[key]
             self.btree.flush()
         self._close()
