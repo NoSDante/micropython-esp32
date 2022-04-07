@@ -26,12 +26,20 @@ class Lightstrip():
         self.neopixel.write()
     
     # light each
+#     async def each(self, each, color="WHITE", clear=True, wait=0):
+#         for i in range(self.n):
+#             if ((i+each) % 2) == 0: self.neopixel[i] = (self.rgb(color))
+#         self.neopixel.write()
+#         await asyncio.sleep_ms(wait)
+#         if clear: self.clear()
+        
+    # light each
     def each(self, each, color="WHITE", clear=True):
         for i in range(self.n):
             if ((i+each) % 2) == 0: self.neopixel[i] = (self.rgb(color))
         self.neopixel.write()
         if clear: self.clear()
-    
+        
     # bounce all
     async def bounce(self, color="WHITE", wait=120, clear=True):
         for i in range(4 * self.n):
