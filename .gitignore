@@ -2,4 +2,7 @@
 /app/test.py
 /config/network_copy.json
 /www/microweb
+/sd/www/microweb
 *.db
+.vscode/
+

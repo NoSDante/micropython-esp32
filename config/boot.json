@@ -1,43 +1,44 @@
 {
-    "DEBUG"   : true,
+    "DEBUG": true,
     "TIMEZONE": {
-        "UTC"     : 1
-        "ZONE"    : "MESZ - Mitteleuropäische Winterzeit (UTC+1)"
-        "SUMMMER" : 3
-        "WINTER"  : 10
+        "UTC": 2,
+        "ZONE": "MESZ - Mitteleuropäische Sommerzeit (UTC+2)",
+        "SUMMMER": 3,
+        "WINTER": 10
     },
-    "DEVICE" : {
-        "TYPE"   : "ESP32-WROVER"
-        "BRAND"  : "Tonysa"
-        "MODEL"  : "TTGO T8 V1.7.1"
-        "PSRAM"  : "8MB"
-        "FLASH"  : "4MB"
-        "SDCARD" : "Mount on SPI Slot 1"
-        "SDSLOT" : "Slot 1 mosi=15, sck=14, dat1=4, dat2=12"
-        "SDPINS" : "Pins cs=13, miso=2"
+    "DEVICE": {
+        "TYPE": "ESP32-WROVER",
+        "BRAND": "Tonysa",
+        "MODEL": "TTGO T8 V1.7.1",
+        "PSRAM": "8MB",
+        "FLASH": "4MB",
+        "SDCARD": "Mount on SPI Slot 1",
+        "SDSLOT": "Slot 1 mosi=15, sck=14, dat1=4, dat2=12",
+        "SDPINS": "Pins cs=13, miso=2"
     },
-    "SDCARD_OFF" : {
-        "SPI"  : 1
-        "CS"   : 13
-        "MOSI" : 2
-        "PATH" : "/sd"
+    "SDCARD": {
+        "SPI": 1,
+        "CS": 13,
+        "MISO": 2,
+        "WIDTH": 1,
+        "PATH": "/sd"
     },
-    "RTC" : {
-        "MODUL" : "DS1307"
+    "RTC": {
+        "MODUL": "DS1307"
     },
-    "NETWORK" : {
-        "RECONNECT" : 7200
-        "DATABASE"  : "/network.db"
-        "DEFAULT"   : "default"
-        "WIFI"      : false
-        "SMART"     : true
-        "AP_IF"     : false
-        "AP"        : false
+    "NETWORK": {
+        "RECONNECT": 7200,
+        "DATABASE": "/network.db",
+        "DEFAULT": "default",
+        "WIFI": true,
+        "SMART": true,
+        "AP_IF": true,
+        "AP": false
     },
-     "I2C" : {
-        "SLOT" : 1
-        "SDA"  : 21
-        "SCL"  : 22
-        "FREQ" : 400000
+    "I2C": {
+        "SLOT": 1,
+        "SDA": 21,
+        "SCL": 22,
+        "FREQ": 400000
     }
 }

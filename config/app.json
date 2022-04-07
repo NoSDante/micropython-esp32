@@ -1,28 +1,29 @@
 {
     "WEB" : {
-        "INIT" : false
+        "INIT" : true,
+        "ROOT" : "www"
     },
     "DISPLAY" : {
-        "INIT"     : true
+        "INIT"     : true,
         "INTERVAL" : 5
     },
     "LOG" : {
-        "INIT"      : true
-        "INTERVAL"  : 10
-        "PATH"      : "/log/"
-        "FILE"      : "data"
-        "MIMETYPE"  : "csv"
-        "TIME"      : "23:59"
+        "INIT"      : false,
+        "INTERVAL"  : 10,
+        "PATH"      : "/log/",
+        "FILE"      : "data",
+        "MIMETYPE"  : "csv",
+        "TIME"      : "23:59",
         "TOSDCARD"  : true
     },
     "LIGHTSTRIP": {
-        "INIT"     : true
-        "PIXEL"    : 8
+        "INIT"     : true,
+        "PIXEL"    : 8,
         "DATA_PIN" : 27
     },
     "NIGHTMODE": {
-        "INIT"     : true
-        "START"    : "00:00"
+        "INIT"     : true,
+        "START"    : "00:00",
         "END"      : "06:00"
     }    
 }
