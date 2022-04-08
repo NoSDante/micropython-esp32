@@ -42,7 +42,7 @@ def init():
     int:  reconnect: time for WiFi try-reconnecting loop 0=off
     """
     debug, sdcard, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
-    ip_address, ap_ip_address, rtc_modul = "0.0.0.0", "0.0.0.0", ""
+    ip_address, ap_ip_address, rtc_modul, essid = "0.0.0.0", "0.0.0.0", "", ""
     reconnect, utc = 0, 0
     
     """
@@ -86,7 +86,7 @@ def init():
     """
     if boot.get("NETWORK"):
         print("\nnetwork...")
-        from core.wifi import smart_connect, connect, is_connected, get_ip, get_ap_ip, start_ap, stop_ap
+        from core.wifi import smart_connect, connect, is_connected, get_ip, get_essid, get_ap_ip, start_ap, stop_ap
         network = boot.get("NETWORK")
         ap_if = network.get("AP_IF")
         ap_start = False
@@ -103,6 +103,8 @@ def init():
                 connected = True
                 ip = get_ip()
                 if ip is not None: ip_address = ip
+                essid = get_essid()
+                if essid is None: essid = ""
                 """
                 Timezone UTC+ to set an offset for the RTC
                 """
@@ -186,6 +188,7 @@ def init():
     system.save("DEBUG", debug)
     system.save("SDCARD", sdcard)
     system.save("WIFI", wifi)
+    system.save("ESSID", essid)
     system.save("SMART", smart)
     system.save("CONNECTED", connected)
     system.save("RECONNECT", reconnect)
