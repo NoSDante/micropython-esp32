@@ -1,5 +1,6 @@
 config_debug
 app/test.py
+test.py
 config/network_copy.json
 *.db
 .vscode/
