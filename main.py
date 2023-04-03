@@ -29,7 +29,7 @@ def init():
                 "AP": True
             }
         }
-        
+    
     """
     Default system states
     bool: mounted:   is SD-Card mounted
@@ -44,12 +44,12 @@ def init():
     debug, sdcard, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
     ip_address, ap_ip_address, rtc_modul, essid = "0.0.0.0", "0.0.0.0", "", ""
     reconnect, utc = 0, 0
-    
+
     """
     DEBUG
     """
     debug = boot.get("DEBUG")
-    
+
     if debug:
         """
         reset, wake return codes
@@ -66,7 +66,7 @@ def init():
         if device is not None:
             print("\n----- DEVICE -----")
             for key, value in device.items(): print("{}: {}".format(key, value))
-    
+
     """
     SDCard
     """
@@ -80,19 +80,19 @@ def init():
             miso=boot.get("SDCARD").get("MISO"),
             debug=debug  
             )
-    
+
     """
     NETWORK
     """
     if boot.get("NETWORK"):
         print("\nnetwork...")
-        from core.wifi import smart_connect, connect, is_connected, get_ip, get_essid, get_ap_ip, start_ap, stop_ap
+        from core.wifi import smart_connect, connect, disconnect, is_connected, get_ip, get_essid, get_ap_ip, start_ap, stop_ap
         network = boot.get("NETWORK")
         ap_if = network.get("AP_IF")
         ap_start = False
-        if network.get("WIFI"):
+        if network.get("WIFI") or network.get("FOR_TIMESYNC"):
             #stop_ap()
-            wifi = True
+            wifi = network.get("WIFI")
             reconnect = network.get("RECONNECT")
             timezone = boot.get("TIMEZONE")
             if timezone: utc = timezone.get("UTC")
@@ -131,7 +131,10 @@ def init():
                         timesync = True
                         print('time synchronized')
                     except Exception as e:
-                        print('setting time failed', e)          
+                        print('setting time failed', e)
+                if wifi == False and network.get("FOR_TIMESYNC"):
+                    disconnect()
+                    connected, ip_address, essid = False, "0.0.0.0", ""
             elif ap_if:
                 ap_start = True
         elif network.get("AP"):
@@ -140,30 +143,32 @@ def init():
             start_ap()
             ip = get_ap_ip()
             if ip is not None: ap_ip_address = ip
+
     """
     RTC
     """
     if boot.get("RTC"):
+        print("\nRTC...")
         from machine import I2C, Pin, RTC
         i2c = I2C(
             boot.get("I2C").get("SLOT"),
             scl=Pin(boot.get("I2C").get("SCL")),
             sda=Pin(boot.get("I2C").get("SDA"))
-        )        
-        try:
-            from lib.ds1307 import DS1307
-            ds1307 = DS1307(i2c)
-        except ImportError as e:
-            print("cannot import module", e)
-        # synchronize RTC
-        if timesync:
-            ds1307.datetime(RTC().datetime())
-            if debug: print("synchronized RTC", ds1307.datetime())
-        else:
-            # initialize RTC
-            rtc_modul = boot.get("RTC").get("MODUL")
-            if debug: print("RTC Modul:", rtc_modul)
-            if rtc_modul.lower() == "ds1307":
+        )
+        rtc_modul = boot.get("RTC").get("MODUL")
+        if rtc_modul.lower() == "ds1307":
+            try:
+                from lib.ds1307 import DS1307
+                ds1307 = DS1307(i2c)
+            except ImportError as e:
+                print("cannot import module", e)
+            # synchronize RTC
+            if timesync:
+                ds1307.datetime(RTC().datetime())
+                if debug: print("synchronized RTC", ds1307.datetime())
+            else:
+                # initialize RTC
+                if debug: print("RTC Modul:", rtc_modul)
                 rtc = True
                 if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
                     rtc_modul = "SETTIME"
@@ -174,11 +179,33 @@ def init():
                     #( year,month,day,weekday,hour,minute,second,microsecond )
                     RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
                     timesync = True
-                    if debug: print("RTC", RTC().datetime())            
+                    if debug: print("RTC", RTC().datetime())
+                    
+        if rtc_modul.lower() == "ds3231":
+            try:
+                from lib.ds3231 import DS3231
+                ds3231 = DS3231(i2c)
+            except ImportError as e:
+                print("cannot import module", e)
+            # synchronize RTC
+            if timesync:
+                ds3231.DateTime(RTC().datetime())                
+                if debug: print("synchronized RTC", ds3231.DateTime())
             else:
-                rtc_modul = "UNKNOWN"
-                print("unknown RTC modul", rtc_modul)
-  
+                # initialize RTC
+                if debug: print("RTC Modul:", rtc_modul)
+                rtc = True
+                if ds3231.DateTime() == "2000, 1, 1, 0, 0, 0, 0, 0":
+                    rtc_modul = "SETTIME"
+                else:
+                    # probably correct
+                    if debug: print(rtc_modul, ds3231.DateTime())
+                    dt = ds3231.DateTime()
+                    #( year,month,day,weekday,hour,minute,second,microsecond )
+                    RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
+                    timesync = True
+                    if debug: print("RTC", RTC().datetime())
+
     """
     Save states
     """
@@ -206,8 +233,11 @@ def init():
 # init
 init()
 
+gc.collect()
+print("\n----- RAM -----")
+print("heap RAM:", gc.mem_alloc())
+print("free RAM:", gc.mem_free())
+
 # run app
-from app.app import main
+from app import main
 main()
-# from web import start_web
-# start_web()

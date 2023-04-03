@@ -15,12 +15,12 @@
     <title>ESP32 Webinterface</title>
 
     <!-- Bootstrap-CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href=('css/bootstrap.min.css');" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href=('dist/css/bootstrap.min.css');" />
     <!-- mCustomScrollbar CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='css/jquery.mCustomScrollbar.min.css';" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='dist/css/jquery.mCustomScrollbar.min.css';" />
 
     <!-- Custom Theme -->
-    <link href="style.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -132,12 +132,13 @@
         }
 
         /** INIT FEATURES */
-        init = function() {
-            dashboard.init();
-            bootmgr.init();
-            sensor.init();
-        }
+        // init = function() {
+        //     dashboard.init();
+        //     bootmgr.init();
+        //     sensor.init();
+        // }
     </script>
+    <script src="js/features.js"></script>
 
     <!-- Toast -->
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
@@ -203,6 +204,25 @@
                 <div class="modal-footer">
                     <button id="wifiOnButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-success">WiFi aktivieren</button>
                     <button id="wifiOffButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-warning">WiFi deaktivieren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="apModal" class="modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Acces Point</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning  d-flex align-items-center" role="alert">
+                        Das Webinterface ist möglicherweise nicht mehr erreichbar, wenn der Acces Point deaktiviert wird!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="apOnButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-success">Acces Point aktivieren</button>
+                    <button id="apOffButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-warning">Access Point deaktivieren</button>
                 </div>
             </div>
         </div>
@@ -286,10 +306,10 @@
                         <!-- Sidebar-Toggle -->
                         <div class="col-2">
                             <nav class="navbar navbar-expand-lg">
-                                <button type="button" id="sidebarCollapse" class="navbar-btn" style="min-width: 40px;">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
+                                <button type="button" aria-label="Navigation" id="sidebarCollapse" class="navbar-btn" style="min-width: 40px;">
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
                                 </button>
                             </nav>
                         </div>
@@ -307,6 +327,8 @@
             <div class="container-fluid" id="main">
                 <div id="notConnected" class="alert alert-danger visually-hidden mb-5" role="alert">
                     Server is not connected!
+                </div>
+                <div id="listServer" class="alert alert-warning visually-hidden mb-5" role="alert">
                 </div>
                 <div id="pageInfo" class="alert alert-primary visually-hidden mb-5" role="alert">
                 </div>
@@ -337,20 +359,20 @@
                     <div class="dash-item col-xl-3 col-sm-6 col-lg-6 col-12 wifi-item">
                         <div class="card text-center rounded h-100">
                             <div class="card-body">
-                                <i class="fas fa-wifi fa-2x text-success" aria-hidden="true"></i>
+                                <i class="fas fa-wifi fa-2x faWifi" aria-hidden="true"></i>
                                 <h4 class="card-title mt-3">WiFi</h4>
-                                <p class="card-text text-success">Verbunden</p>
-                                <p class="visually-hidden dash-label fs-3">ON</p>
+                                <p class="card-text wifiState"></p>
+                                <!-- <p class="visually-hidden dash-label fs-3">ON</p> -->
                             </div>
                         </div>
                     </div>
                     <div class="dash-item col-xl-3 col-sm-6 col-lg-6 col-12 ap-item">
                         <div class="card text-center rounded h-100">
                             <div class="card-body">
-                                <i class="fas fa-broadcast-tower fa-2x text-secondary" aria-hidden="true"></i>
+                                <i class="fas faAp fa-broadcast-tower fa-2x" aria-hidden="true"></i>
                                 <h4 class="card-title mt-3">Access Point</h4>
-                                <p class="card-text text-danger">Inaktiv</p>
-                                <p class="visually-hidden dash-label fs-3">OFF</p>
+                                <p class="card-text apState"></p>
+                                <!-- <p class="visually-hidden dash-label fs-3">OFF</p> -->
                             </div>
                         </div>
                     </div>
@@ -474,6 +496,17 @@
                                                                 </div>
                                                             </td>
                                                         </tr>
+                                                        <tr id="ForTimesyncControll">
+                                                            <th scope="row">For Timesync <span data-bs-toggle="tooltip" data-bs-placement="top" title="Neztwerkverbindung wird temporär zur synchronisierung der Uhrzeit hergestellt!"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5><span class="check-label badge"></span></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check form-switch form-switch-md">
+                                                                    <input name="for_timesync" class="switch-on form-check-input" type="checkbox" role="switch" id="ForTimesyncSwitch" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
                                                         <tr id="Reconnect">
                                                             <th scope="row">Reconnect <span data-bs-toggle="tooltip" data-bs-placement="top" title="Interval zur WiFi Verbindungsprüfung in Sekunden, 0=off!"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
                                                             <td>
@@ -501,8 +534,6 @@
                                                         <input class="form-control" name="default">
                                                         <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
                                                         <ul class="dropdown-menu dropdown-menu-end" id="selectDefaultNetwork">
-                                                            <li><a class="dropdown-item">WLAN_1</a></li>
-                                                            <li><a class="dropdown-item">WLAN_2</a></li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -568,7 +599,7 @@
                                                             </td>
                                                         </tr>
                                                         <tr id="MisoControll">
-                                                            <th scope="row">Mosi <span data-bs-toggle="tooltip" data-bs-placement="top" title="mosi can be used to specify an SPI mosi pin."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <th scope="row">MISO <span data-bs-toggle="tooltip" data-bs-placement="top" title="miso can be used to specify an SPI miso pin."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
                                                             <td>
                                                                 <h5 class="text-label"></h5>
                                                             </td>
@@ -725,12 +756,12 @@
                                                             </td>
                                                             <td>
                                                                 <select name="utc" class="form-select form-select-lg w-50" aria-label=".form-select-lg" style="min-width: 70px;">
-                                                                <option zone="MESZ - Mitteleuropäische Winterzeit (UTC+1)" value="1">1</option>
-                                                                <option zone="MESZ - Mitteleuropäische Sommerzeit (UTC+2)" value="2">2</option>
-                                                                <option value="3">3</option>
-                                                                <option value="4">4</option>
-                                                                <option value="5">5</option>
-                                                                <option value="6">6</option>
+                                                                <option key="zone" data="MESZ - Mitteleuropäische Winterzeit (UTC+1)" value="1">1</option>
+                                                                <option key="zone" data="MESZ - Mitteleuropäische Sommerzeit (UTC+2)" value="2">2</option>
+                                                                <option key="zone" value="3">3</option>
+                                                                <option key="zone" value="4">4</option>
+                                                                <option key="zone" value="5">5</option>
+                                                                <option key="zone" value="6">6</option>
                                                                 </select>
                                                             </td>
 
@@ -805,17 +836,18 @@
                         <button id="saveBootConfig" type="button" class="float-end btn btn-lg btn-success mt-3" disabled>Speichern</button>
                     </div>
                     <div class="line"></div>
+                </div>
 
-                    <div id="sensor">
-                        <div class="col-12 mb-5">
-                            <h3>Sensoren <i class="fas fa-microchip"></i></h3>
+                <div id="sensor row">
+                    <div class="col-12 mb-5">
+                        <h3>Sensoren <i class="fas fa-microchip"></i></h3>
+                    </div>
+                    <button id="loadSensors" type="button" class="btn btn-light border border-dark mb-5">Sensoren starten</button>
+                    <div id="bme680" class="visually-hidden">
+                        <div class="col">
+                            <h4>BME680</h4><small class="text-muted">Last updated 3 mins ago</small>
                         </div>
-                        <button id="getSensorData" type="button" class="btn btn-lg btn-primary mb-3">Laden</button>
-                        <div id="BME680">
-                            <div class="col">
-                                <h4>BME680</h4><small class="text-muted">Last updated 3 mins ago</small>
-                            </div>
-                        </div>
+
                         <div class="row">
                             <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
                                 <div class="card rounded h-100">
@@ -930,12 +962,28 @@
                         <!--\.row-->
                         <div class="line"></div>
                     </div>
-
-                    <div id="SCD30">
-                        <div class="col">
+                    <!-- SCD30 -->
+                    <div id="scd30" class="visually-hidden">
+                        <div class="col-12">
                             <h4>SCD30</h4>
                         </div>
-
+                        <div class="card mb-5">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-2">
+                                        <button id="startSensorData" type="button" class="btn btn-success btn-sm visually-hidden startSensorData">Run</button>
+                                        <button id="stopSensorData" type="button" class="btn btn-warning btn-sm visually-hidden stopSensorData">Stop</button>
+                                        <!-- <button id="startSensorDataStream" type="button" class="btn btn-success btn-sm mb-3 startSensorDataStream">Stream</button> -->
+                                    </div>
+                                    <div class="d-none d-sm-block col-5 text-center text-muted">letzte Aktualiserung <span class="time">--:--:--</span>
+                                    </div>
+                                    <div class="col-3 fw-bold text-center"><span class="state"></span>
+                                    </div>
+                                    <div class="col-2 lds">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
                                 <div class="card rounded h-100">
@@ -944,7 +992,7 @@
                                             <div class="col-8">
                                                 <h5 class="card-title">Temperatur</h5>
                                             </div>
-                                            <div class="col-4 text-right">
+                                            <div class="col-4">
                                                 <span>
                                                 <svg class="svg-icon svg-temperature" viewBox="0 0 20 20">
                                                     <path fill="none"
@@ -956,14 +1004,23 @@
                                             </div>
                                         </div>
                                         <div class="card-item">
-                                            <span class="card-value">22,54</span>
+                                            <span class="temp card-value">---</span>
                                             <sup class="units">°C</sup>
                                         </div>
                                         <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
-                                            <div class="progress-bar l-bg-green" role="progressbar" data-width="44%" aria-valuenow="22" aria-valuemin="0" aria-valuemax="50" style="width: 44%;">
+                                            <div class="progress-bar progress-temp l-bg-green" role="progressbar" aria-valuenow="0" aria-valuemin="-50" aria-valuemax="50" style="width: 0%;">
                                             </div>
                                         </div>
-                                        <small class="text-muted">Last updated 3 mins ago</small>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="temp_max temp_unit badge_max fw-bold">---
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div class="temp_min temp_unit badge_min fw-bold">---
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -975,7 +1032,7 @@
                                             <div class="col-8">
                                                 <h5 class="card-title">Feuchtigkeit</h5>
                                             </div>
-                                            <div class="col-4 text-right">
+                                            <div class="col-4">
                                                 <span>
                                                 <svg class="svg-icon svg-humidity" viewBox="0 0 20 20">
                                                     <path fill="none"
@@ -987,13 +1044,22 @@
                                             </div>
                                         </div>
                                         <div class="card-item">
-                                            <span class="card-value">55</span>
+                                            <span class="relh card-value">--</span>
                                             <sup class="units">%</sup>
                                         </div>
                                         <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
-                                            <div class="progress-bar l-bg-green" role="progressbar" data-width="44%" aria-valuenow="44" aria-valuemin="0" aria-valuemax="100" style="width: 44%;"></div>
+                                            <div class="progress-bar progress-relh" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>
                                         </div>
-                                        <small class="text-muted">Last updated 3 mins ago</small>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="relh_max percent_unit badge_max fw-bold">--
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div class="relh_min percent_unit badge_min fw-bold">--
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -1005,7 +1071,7 @@
                                             <div class="col-8">
                                                 <h5 class="card-title">CO2</h5>
                                             </div>
-                                            <div class="col-4 text-right">
+                                            <div class="col-4">
                                                 <span>
                                                 <svg class="svg-icon svg-air" viewBox="0 0 20 20">
                                                     <path fill="none"
@@ -1019,14 +1085,29 @@
                                             </div>
                                         </div>
                                         <div class="card-item">
-                                            <span class="card-value">587</span>
-                                            <sup class="units">ppm</sup>
+                                            <div class="row align-items-center">
+                                                <div class="col-7">
+                                                    <span class="co2 card-value">---</span>
+                                                    <sup class="units">ppm</sup>
+                                                </div>
+                                                <div class="col-5">
+                                                    <div class="co2-state fw-bold"></div>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
-                                            <div class="progress-bar l-bg-green" role="progressbar" data-width="25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" style="width: 25%;"></div>
+                                            <div class="progress-bar progress-co2 progress-co2-score-1" role="progressbar" style="width: 0%" aria-valuenow="0"></div>
                                         </div>
-                                        <small class="text-muted">Last updated 3 mins ago</small>
-                                        <div class="card-footer mt-2 text-white bg-success">Score: NORMAL</div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="co2_max ppm_unit badge_max fw-bold">---
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div class="co2_min ppm_unit badge_min fw-bold">---
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -1123,7 +1204,7 @@
 
                 <!-- Copyright -->
                 <div class="text-center p-4" style="background-color: rgba(0, 0, 0, 0.05);">
-                    © 2022 Copyright:
+                    © 2023 Copyright:
                     <a class="text-reset fw-bold" href="#">André Schepers</a>
                 </div>
                 <!-- Copyright -->
@@ -1135,37 +1216,31 @@
         <!-- jQuery -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script>
-            window.jQuery || document.write('<script src="js/jquery.min.js">\x3C/script>')
+            window.jQuery || document.write('<script src="dist/js/jquery.min.js">\x3C/script>')
         </script>
         <!-- Bootstrap -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.2/umd/popper.min.js"></script>
         <script>
-            window.Popper || document.write('<script src="js/popper.min.js">\x3C/script>')
+            window.Popper || document.write('<script src="dist/js/popper.min.js">\x3C/script>')
         </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
         <script>
-            window.bootstrap || document.write('<script src="js/bootstrap.bundle.min.js>\x3C/script>')
+            window.bootstrap || document.write('<script src="dist/js/bootstrap.bundle.min.js>\x3C/script>')
         </script>
         <!-- Fontawesome => contains only used icons-->
         <script src="js/solid.slim.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/fontawesome.min.js"></script>
         <script>
-            window.FontAwesome || document.write('<script src="js/fontawesome.min.js>\x3C/script>')
+            window.FontAwesome || document.write('<script src="dist/js/fontawesome.min.js>\x3C/script>')
         </script>
         <!-- jQuery Custom Scroller CDN -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
         <script>
-            window.mCustomScrollbar || document.write('<script src="js/jquery.mCustomScrollbar.concat.min.js>\x3C/script>')
+            window.mCustomScrollbar || document.write('<script src="dist/js/jquery.mCustomScrollbar.concat.min.js>\x3C/script>')
         </script>
 
         <!-- Custom Javascript-->
-        <script src="script.js"></script>
-        <script type="text/javascript">
-            $(document).ready(function() {
-                server.base();
-                page.show();
-            });
-        </script>
+        <script src="js/script.js"></script>
 </body>
 
 </html>

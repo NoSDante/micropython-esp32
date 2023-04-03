@@ -27,11 +27,18 @@ class Store(object):
         """
         self._storage.pop(key)
 
-    def get(self, key, default=None):
+    def get(self, key=None, default=None):
         """
         Get a particular stage variable. Defaults to None.
 
         :param key: The name of the stage variable
         :param default: The default value if there is no variable
         """
-        return self._storage.get(key, default)
+        if key:
+            return self._storage.get(key, default)
+        else:
+            storage = {}
+            for key in self._storage:
+                storage.update({key: self._storage.get(key)})
+            if len(storage) == 0: storage = default
+            return storage

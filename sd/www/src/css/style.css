@@ -496,6 +496,82 @@ span>.svg-icon {
     left: 0;
 }
 
+.temp_unit:after {
+    content: " °C";
+}
+
+.percent_unit:after {
+    content: " %";
+}
+
+.ppm_unit:after {
+    content: " ppm";
+}
+
+.badge_max::before {
+    content: "max";
+    margin-right: 5px;
+    background-color: red;
+    padding: 0.25em 0.45em;
+    font-size: .85em;
+    font-weight: 500;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+}
+
+.badge_min::before {
+    content: "min";
+    margin-right: 5px;
+    background-color: rgba(10, 26, 247, 0.959);
+    padding: 0.25em 0.45em;
+    font-size: .85em;
+    font-weight: 500;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+}
+
+
+/* ---------------------------------------------------
+    LOADING SPINNER
+----------------------------------------------------- */
+
+.lds-hourglass {
+    display: inline-block;
+    position: relative;
+}
+
+.lds-hourglass:after {
+    content: " ";
+    display: block;
+    border-radius: 50%;
+    width: 0;
+    height: 0;
+    box-sizing: border-box;
+    border: 16px solid #fff;
+    border-color: #000000 transparent #000000 transparent;
+    animation: lds-hourglass 1.2s infinite;
+}
+
+@keyframes lds-hourglass {
+    0% {
+        transform: rotate(0);
+        animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+    }
+    50% {
+        transform: rotate(900deg);
+        animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    }
+    100% {
+        transform: rotate(1800deg);
+    }
+}
+
 
 /* ---------------------------------------------------
     RGBSHADOWCOLORSCHEME

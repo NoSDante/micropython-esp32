@@ -30,10 +30,12 @@
         "RECONNECT": 7200,
         "DATABASE": "/network.db",
         "DEFAULT": "default",
+        "TIMESYNC_IF": true,
         "WIFI": true,
         "SMART": true,
         "AP_IF": true,
         "AP": false
+        "FOR_TIMESYNC": false
     },
     "I2C": {
         "SLOT": 1,

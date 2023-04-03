@@ -47,6 +47,14 @@ def get_ip():
     if wlan.active() and wlan.isconnected(): details = wlan.ifconfig()
     return details[0] if details else None
 
+def get_essid():
+    """
+    Get the ESSID for the current active WLAN
+    """
+    wlan = WLAN(STA_IF)
+    if wlan.active() and wlan.isconnected(): essid = wlan.config('essid')
+    return essid if essid else None
+
 def get_ap_ip():
     """
     Get the IP address of the Access Point, if it is running
@@ -54,6 +62,14 @@ def get_ap_ip():
     ap = WLAN(AP_IF)
     if ap.active(): details = ap.ifconfig()
     return details[0] if details else None
+
+def get_ap_essid():
+    """
+    Get the ESSID for the Access Point
+    """
+    ap = WLAN(AP_IF)
+    if ap.active(): essid = ap.config('essid')
+    return essid if essid else None
 
 def get_netscan():
     """
@@ -76,9 +92,10 @@ def smart_connect():
         if network.get("essid") in networks:
             print("network found in wlan:", network.get("essid"))
             connect(network.get("essid"), network.get("password"))
-            break
+            if is_connected():
+                break
 
-def connect(essid=None, password='', store=False):
+def connect(essid=None, password="", store=False):
     """
     Connect to the WiFi network based on the configuration.
     Fails silently if there is no configuration.
@@ -105,7 +122,7 @@ def connect(essid=None, password='', store=False):
         # save network in db-file
         if store: save_network(essid, password)
     
-    # get password by essid
+    # get config by essid
     if password is None and cfg is None:
         cfg = get_network(network=essid)
         #if cfg is None: cfg = get_config()
@@ -146,7 +163,9 @@ def connect(essid=None, password='', store=False):
                 break
             sleep_ms(500)
             print('.', end='')
-        if not connected: print(' connecting failed')
+        if not connected:
+            print(' connecting failed')        
+            wlan.active(False)
     except Exception as e:
         # print error
         print(e)

@@ -58,7 +58,7 @@ class Sensors():
         if clean: self.sps30.fan_clean(debug=self.debug)
         if start: self.sps30.start_measurement(debug=self.debug)
             
-    def init_SCD30(self, i2c=None, start=True, auto_calibration=False, forced_co2=None, temp_offset=None, pause=1000):      
+    def init_SCD30(self, i2c=None, start=True, auto_calibration=False, forced_co2=None, temp_offset=None, meas_interval=None, pause=1000):      
         self.scd30 = None
         
         try: from lib.scd30 import SCD30
@@ -86,13 +86,20 @@ class Sensors():
             if self.scd30.get_automatic_recalibration() != auto_calibration:
                 self.scd30.set_automatic_recalibration(auto_calibration)
         
+        # default 400
         if forced_co2 is not None and isinstance(forced_co2, int):            
             if self.debug: print("set forced recalibration {}ppm".format(forced_co2))
             self.scd30.set_forced_recalibration(forced_co2)
-            
+        
+        # default 0            
         if temp_offset is not None and isinstance(temp_offset, int):            
             if self.debug: print("set temperature offset {}°C".format(temp_offset))
             self.scd30.set_temperature_offset(temp_offset)
+        
+        # default 2          
+        if meas_interval is not None and isinstance(meas_interval, int):            
+            if self.debug: print("set meas_interval {}second(s)".format(meas_interval))
+            self.scd30.set_measurement_interval(meas_interval)
         
         sleep(0.1)
         

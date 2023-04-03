@@ -44,8 +44,10 @@ sensors = Store(
     bh1750 = False,
     sps30 = False,
     as3935 = False,
-    mq2 = False
+    mq2 = False,
+    bme680=False
 )
+sensordata = Store()
 
 # Lightstrip Demo
 async def runLightstripDemo(lightstrip):
@@ -94,10 +96,11 @@ async def runReconnect(interval=3600, interval_if=600, retrys=3):
                 if retry == 0: interval = interval_if
                 if retry != retrys: retry += 1
             # Start Access Point as fallback when reaching max retrys
-            if retry == retrys and state.get('ap_if'):
-                start_ap()
-                state.set("ap_ip_address", get_ap_ip())
+            if retry == retrys:
                 interval = 0
+                if state.get('ap_if'):
+                    start_ap()
+                    state.set("ap_ip_address", get_ap_ip())   
 
 # Logger loop
 async def runLogger(sensor, config):
@@ -214,6 +217,7 @@ async def runWatchdogLux(bh1750, interval=3):
         if debug: print('[BH1750] Illuminance: {} Lux'.format(bh1750.data["lux"]))
         await asyncio.sleep(interval)
 
+
 # SCD30 loop
 async def runWatchdogCO2(scd30, interval=2):
     if debug: err_read = 0
@@ -250,6 +254,7 @@ async def runWatchdogCO2(scd30, interval=2):
                 'time': time(),
                 "date": date()
                 }
+            sensordata.set("scd30", scd30.data)
             if debug:
                 print("[SCD30] CO2: {} ppm | Temp.: {:2.1f} °C | Hum.: {} % | akt.".format(co2, temp, relh))
                 print("[SCD30] CO2: {} ppm | Temp.: {:2.1f} °C | Hum.: {} % | max.".format(co2_max, temp_max, relh_max))
@@ -371,7 +376,8 @@ async def displayMainLoop(tft, sensor, lightstrip, interval=2):
     
     # init nightmode
     # -1 mode on, state undefined
-    if app.get("nightmode"): nightmode = -1
+    #if app.get("nightmode"): nightmode = -1
+    if app.get("nightmode"): nightmode = 1
     # TODO: is now between nightstart, nightend
     # 1 = on, 0 = off
     # nightmode = 1
@@ -454,7 +460,7 @@ async def displayMainLoop(tft, sensor, lightstrip, interval=2):
     
     # is warning cleared
     warning_cleared = False
-    
+
     # last connection state
     last_connected = None
     
@@ -471,6 +477,7 @@ async def displayMainLoop(tft, sensor, lightstrip, interval=2):
         # init sensor values
         CO2_WARNING_VALUE = 800
         co2_warning, co2_warning_last, co2_color_last = None, None, None
+        heat_warning, heat_warning_last, heat_color_last = None, None, None
         co2_last, co2_max_last, co2_min_last = None, None, None
         temp_last, temp_max_last, temp_min_last, hum_last = None, None, None, None
     if sensors.get('sps30'):
@@ -595,36 +602,40 @@ async def displayMainLoop(tft, sensor, lightstrip, interval=2):
         # next draw coord-y
         line += 1
         coord_y += font_height + offset_y + START_Y
+        color = ITEM_COLOR
         if sensors.get('scd30'):
             # get sensor values
             temp  = sensor.scd30.data.get("temp")
             hum = sensor.scd30.data.get("relh")        
             if temp_last != temp:
-                color = ITEM_COLOR
                 value = "{} C".format(str(temp).replace(".", ","))
                 # clear x1 area
                 tft.display.fill_rectangle(coord_x1, coord_y, clear_width_x1, font_height, tft.color(CLEAR_COLOR))
                 # draw x1 value
                 tft.display.draw_text(coord_x1, coord_y, value, tft.font, tft.color(VALUE_COLOR))
                 # scoring heatindex or temperature
-                hi, score = scoring.heatindex(temp, hum)
-                if hi is None:
+                heatindex, score = scoring.heatindex(temp, hum)
+                if heatindex is None:
                     # calc difference          
                     temp_diff = temp - temp_last if temp_last is not None else 0
                     temp_diff = round(temp_diff, 1)
                     if temp_diff >= 0: value = "+{}".format(str(temp_diff).replace(".", ","))
                     else: value = "{}".format(str(temp_diff).replace(".", ","))
+                    color = ITEM_COLOR
+                    heat_warning = None
                 else:
-                    color = scoring.color(score)
-                    value = "HI {} C".format(str(hi).replace(".", ","))
-                    hi_warning = "Heatindex is {}".format(score)
-                    hi_score_color = color
+                    heat_score_color = scoring.color(score)
+                    value = "HI {} C".format(str(heatindex).replace(".", ","))
+                    heat_warning = "Heatindex: {}".format(score)
+                    color = heat_score_color
+                    heat_color_last = heat_score_color
                 # draw difference or hi
                 tft.display.fill_rectangle(coord_x2, coord_y, clear_width_x2, font_height, tft.color(CLEAR_COLOR))            
-                tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(ITEM_COLOR))
+                tft.display.draw_text(coord_x2, coord_y, value, tft.font, tft.color(color))
                 # save as last value
                 temp_last = temp
-        
+               
+                
         """scd30
         Area:   humidity, difference
         Coords: x1, x2
@@ -742,25 +753,39 @@ async def displayMainLoop(tft, sensor, lightstrip, interval=2):
             if len(sensor.mq2.data) != 0:
                 # clear area
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-                warning_cleared = True
                 # draw value
                 value = "Gas or Smoke detected"
                 tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color("RED"))
                 sensor.mq2.data = {}
                 if nightmode != 1: await lightstrip.fade()
                 else: lightstrip.cycle(color="RED", times=2)
+                await asyncio.sleep_ms(750)
+                
+        # heat warning
+        if sensors.get('scd30'):
+            if heat_warning is not None:
+                # clear area
+                tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
+                # draw value
+                value = heat_warning
+                tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color(heat_score_color))
+                heat_warning_last = heat_warning
+                #await lightstrip.cycle(color=heat_score_color)
+                lightstrip.pixel(0, color=heat_score_color)
+                lightstrip.pixel(7, color=heat_score_color)
+                #if nightmode != 1: lightstrip.color(color=heat_score_color)
+                await asyncio.sleep_ms(750)  
         
         # co2 warning
         if sensors.get('scd30'):
             if co2_warning is not None:
-                if co2_warning_last != co2_warning or warning_cleared:
+                if co2_warning_last != co2_warning:
                     # clear area
                     tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
                     # draw value
                     value = co2_warning
                     tft.display.draw_text(coord_x, coord_y, value, tft.font, tft.color(co2_score_color))
                     co2_warning_last = co2_warning
-                    warning_cleared = False
                     await lightstrip.cycle(color=co2_score_color)
                     if nightmode != 1: lightstrip.color(color=co2_score_color)
             else:
@@ -768,7 +793,7 @@ async def displayMainLoop(tft, sensor, lightstrip, interval=2):
                 lightstrip.clear()
                 # clear area
                 tft.display.fill_rectangle(coord_x, coord_y, clear_width, font_height, tft.color(CLEAR_COLOR))
-            
+        
         # reset init
         if reset: reset_done = True
         reset = False
@@ -888,6 +913,9 @@ def main():
         TFT_CS    = config.get("TFT").get("CS")
         TFT_DC    = config.get("TFT").get("DC")
         TFT_RESET = config.get("TFT").get("RESET")
+        TFT_ROTATION = config.get("TFT").get("ROTATION")
+        TFT_WIDTH = config.get("TFT").get("WIDTH")
+        TFT_HEIGHT = config.get("TFT").get("HEIGHT")
         TFT_LED   = config.get("TFT").get("LED")
         if TFT_LED == False: TFT_LED = None
         # FONT
@@ -913,6 +941,7 @@ def main():
     # WEBSOCKET
     WEB_INIT = config.get("WEB").get("INIT")
     WEB_ROOT = config.get("WEB").get("ROOT")
+    WEB_START = config.get("WEB").get("START")
     
     del config
     
@@ -948,52 +977,19 @@ def main():
         if debug: print("Webserver IP-Address:", IPAddress)
         if IPAddress: mws2.BindAddress = (IPAddress, 8080)
         # Starts the server as easily as possible in managed mode,
-        mws2.StartManaged()
-        
-        @WebRoute(GET, '/', name='SetServerName')
-        def SetHeaderServerName(microWebSrv2, request):
+        if WEB_START: mws2.StartManaged()
+               
+        @WebRoute(GET, '/server', name='GetServerName')
+        def ResponseServerName(microWebSrv2, request):
             request.Response.SetHeader("server", "MicroWebSrv2")
             request.Response.ReturnOkJSON({"server": "MicroWebSrv2"})
-        
+
         @WebRoute(GET, '/reset', name='GetResetMachine')
         def ResponseResetMachine(microWebSrv2, request):
             from machine import reset
             request.Response.ReturnOkJSON({"success": "Machine ist restarting..."})
             reset()
-            
-        @WebRoute(GET, '/sensordata', name='GetSCD30SensorData')
-        def ResponseGetSCD30SensorData(microWebSrv2, request):
-            sensor = {
-                'scd30': {
-                    'data':{
-                        'co2': 520,
-                        'co2_max': 1000,
-                        'co2_min': 480,            
-                        'temp': 22.2,
-                        'temp_max': 23.7,
-                        'temp_min': 19.2,
-                        'relh': 40,
-                        'relh_max': 48,
-                        'relh_min': 37,
-                        'error': 0
-                        }
-                    }
-                }
-            try:
-                if sensor:
-                    if hasattr(sensor, 'scd30'):
-                        response = sensor.scd30.data
-                        response.update({"success": "SCD30 data loaded"}) 
-                        print(response)
-                        response = "SCD30 data loaded"
-                    else:
-                        response = {"error": "SCD30 delivers no data"}
-                else:
-                    response = {"error": "SCD30 not present"}
-            except Exception as e:
-                    response = "Exception {}".format(e)
-            request.Response.ReturnOk(response)
-            
+
         @WebRoute(GET, '/bootconfig', name='GetBootConfig')
         def ResponseBootConfig(microWebSrv2, request):
             #request.Response.AccessControlAllowOrigin = "Access-Control-Allow-Origin: *"
@@ -1008,10 +1004,9 @@ def main():
                 msg = ("Could not load bootfile", e)
                 response = {"error": msg}
             request.Response.ReturnOkJSON(response)
-            
+
         @WebRoute(GET, '/systemstate', name='GetSystemState')
         def ResponseSystemState(microWebSrv2, request):
-            #request.Response.AccessControlAllowOrigin = "Access-Control-Allow-Origin: *"
             from os import listdir
             try:
                 if "system.db" in listdir():
@@ -1022,8 +1017,96 @@ def main():
             except Exception as e:
                 msg = ("Could not read systemstate", e)
                 response = {"error": msg}
-            request.Response.ReturnOkJSON(response)    
+            request.Response.ReturnOkJSON(response)
+        
+        @WebRoute(GET, '/sensors', name='GetSensors')
+        def ResponseSensors(microWebSrv2, request):
+            try:
+                if sensors:
+                    response = sensors.get()
+                    response.update({"success": "Sensors loaded!"})
+                else:
+                    response = {"info": "No Sensors found!"}
+            except Exception as e:
+                msg = ("Could not find sensors", e)
+                response = {"error": msg}
+            request.Response.ReturnOkJSON(response)
+        
+        @WebRoute(GET, '/wifiturnoff', name='GetWiFiTurnOff')
+        def ResponseWiFiStateOff(microWebSrv2, request):
+            try:
+                from core.wifi import disconnect
+                state.set("ip_address", "0.0.0.0")
+                state.set("reconnect", 0)
+                response = {"success": "Disable WiFi..."}
+            except Exception as e:
+                msg = ("Could not disable WiFi", e)
+                response = {"error": msg}
+            request.Response.ReturnOkJSON(response)
+            disconnect()
             
+        @WebRoute(GET, '/wifiturnon', name='GetWiFiTurnOn')
+        def ResponseWiFiStateOn(microWebSrv2, request):
+            try:
+                from core.wifi import smart_connect, is_connected, get_ip, get_essid
+                smart_connect()
+                if is_connected():
+                    ip = get_ip()
+                    if ip is not None: state.set("ip_address", ip)
+                    essid = get_essid()
+                    if essid is not None: state.set("essid", essid)
+                    response = {"success": "WiFi connected with " + essid}
+                else:
+                    response = {"error": "Could not connect!"}
+            except Exception as e:
+                msg = ("Connecting failed", e)
+                response = {"error": msg}
+            request.Response.ReturnOkJSON(response)
+        
+        @WebRoute(GET, '/apturnoff', name='GetApTurnOff')
+        def ResponseApStateOff(microWebSrv2, request):
+            try:
+                from core.wifi import stop_ap
+                state.set("ap_ip_address", "0.0.0.0")
+                response = {"success": "Disable Access Point..."}
+            except Exception as e:
+                msg = ("Could not disable Access Point", e)
+                response = {"error": msg}
+            request.Response.ReturnOkJSON(response)
+            stop_ap()
+            
+        @WebRoute(GET, '/apturnon', name='GetApTurnOn')
+        def ResponseApStateOn(microWebSrv2, request):
+            try:
+                from core.wifi import start_ap, get_ap_ip
+                start_ap()
+                state.set("ap_ip_address", get_ap_ip)
+                response = {"success": "Access Point enabled"}
+            except Exception as e:
+                msg = ("Could not enable Access Point", e)
+                response = {"error": msg}
+            request.Response.ReturnOkJSON(response)
+        
+        @WebRoute(GET, '/networks', name='GetNetworks')
+        def ResponseNetworks(microWebSrv2, request):
+            from os import listdir
+            try:
+                if "network.json" in listdir("config"):
+                    response = {}
+                    networks = system.get_json_data("network.json", path="config/")
+                    i = 1
+                    for essid in networks:
+                        print("key:", essid)
+                        response.update({i: essid})
+                        i += 1
+                    response.update({"success": "Networks loaded!"})
+                else:
+                    response = {"info": "No networks found!"}
+            except Exception as e:
+                msg = ("Could not load networks", e)
+                response = {"error": msg}
+            request.Response.ReturnOkJSON(response)
+        
         @WebRoute(GET, '/resetbootfile', name='GetResetBootFile')
         def ResponseResetBootConfig(microWebSrv2, request):
             from os import remove, listdir
@@ -1053,8 +1136,8 @@ def main():
                     data = data.replace("True","true")
                     with open('config/boot.json', 'w+b') as file:
                         file.write(data)                
-                        response = system.get_json_data("boot.json", path="config/")
-                        response.update({"success": "Bootconfig saved!"})
+                    response = system.get_json_data("boot.json", path="config/")
+                    response.update({"success": "Bootconfig saved!"})
                 except Exception as e:
                     msg = ("Could not create bootconfig", e)
                     response = {"error": msg}
@@ -1063,6 +1146,52 @@ def main():
             if debug: print("Response:", response)
             request.Response.ReturnOkJSON(response)
         
+        @WebRoute(POST, '/sensordata', name='PostSCD30SensorData')
+        def RequestSCD30SensorData(microWebSrv2, request):
+            if debug: print(request.GetPostedJSONObject())
+            try:
+                if sensors.get('scd30'):
+                    if sensordata.get('scd30'):
+                        response = sensordata.get('scd30')
+                        #response.update({"ID": request.id})
+                        response.update({"success": "SCD30 data"})
+                    else:
+                        response = {"info": "SCD30 data delivers no data"}
+                else:
+                    response = {"error": "SCD30 is not present"}
+            except Exception as e:
+                response = {"error": "Exception {}".format(e)}
+            #if debug: print(response)
+            request.Response.ReturnOkJSON(response)
+            
+        @WebRoute(GET, '/sensordatastream', name='StreamSCD30SensorDataStream')
+        def RequestSCD30SensorDataStream(microWebSrv2, request):
+            if debug: print(request.GetPostedJSONObject())
+            try:
+                if sensors.get('scd30'):
+                    if sensordata.get('scd30'):
+                        import json
+                        #response = json.dumps(sensordata.get('scd30')).encode('utf8')
+                        response = sensordata.get('scd30')
+                        if debug: print("sensordata", type(response))
+                        #response.update({"ID": request.id})
+                        response.update({"success": "SCD30 data"})
+                    else:
+                        response = {"info": "SCD30 data delivers no data"}
+                else:
+                    response = {"error": "SCD30 is not present"}
+            except Exception as e:
+                response = {"error": "Exception {}".format(e)}
+            #if debug: print(response)
+            import io
+            request.Response.ContentType = "text/event-stream"
+            #request.Response.ContentType = "text/plain"
+            #.Response.ReturnStream(200, io.StringIO(response))
+            #request.Response.ReturnStream(200, response)
+            if debug: print(io.StringIO(str(response)))
+            request.Response.ReturnStream(200, io.StringIO(str(response)))
+
+    
     print("\nsensors...")
     
     # SENSORS
@@ -1088,6 +1217,7 @@ def main():
             auto_calibration=SCD30_AUTO_CALI,
             forced_co2=SCD30_FORCED_CO2,
             temp_offset=SCD30_TEMP_OFFSET,
+            meas_interval=SCD30_MEAS_INTERVAL,
             pause=SCD30_PAUSE
         )
     
@@ -1116,9 +1246,9 @@ def main():
     display = False
     if DISPLAY_INIT:
         print("\ndisplay initializing...")
-        rotation = 90  # horizontal:90, vertical:0
+        #rotation = TFT_ROTATION  # horizontal: 90, 270 | vertical: 0, 180
         # ILI9341
-        tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=320, height=240, rotation=rotation, debug=debug)
+        tft = Display(cs=TFT_CS, dc=TFT_DC, reset=TFT_RESET, width=TFT_WIDTH, height=TFT_HEIGHT, rotation=TFT_ROTATION, debug=debug)
         # FONT
         if tft: tft.setFont(FONT_FILE, FONT_WIDTH, FONT_HEIGHT)
         if tft.font: display = True

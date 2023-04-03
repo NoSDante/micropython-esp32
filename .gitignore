@@ -1,8 +1,12 @@
-/config_debug
-/app/test.py
-/config/network_copy.json
-/www/microweb
-/sd/www/microweb
+config_debug
+app/test.py
+config/network_copy.json
 *.db
 .vscode/
 
+sd/www/src/*.json
+sd/www/build
+sd/www/microweb
+sd/www/node_modules
+sd/www/package*
+sd/www/webpack*

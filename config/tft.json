@@ -1,18 +1,21 @@
 {
-    "TFT" : {
-        "DRIVER" : "ILI9341"
-        "SPI"    : 2
-        "MOSI"   : 23
-        "MISO"   : 19
-        "SCK"    : 18
-        "CS"     : 5
-        "DC"     : 26
-        "RESET"  : 25
-        "LED"    : false
-    },
-    "FONT" : {
-        "FILE"   : "Espresso_Dolce18x24.c"
-        "WIDTH"  : 18
-        "HEIGHT" : 24
-    }
+	"TFT": {
+		"DRIVER": "ILI9341",
+		"SPI": 2,
+		"MOSI": 23,
+		"MISO": 19,
+		"SCK": 18,
+		"CS": 5,
+		"DC": 26,
+		"RESET": 25,
+		"LED": false,
+		"ROTATION": 90
+		"WIDTH": 320,
+		"HEIGHT": 240
+	},
+	"FONT": {
+		"FILE": "Espresso_Dolce18x24.c",
+		"WIDTH": 18,
+		"HEIGHT": 24
+	}
 }

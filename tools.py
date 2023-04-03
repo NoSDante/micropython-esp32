@@ -21,7 +21,7 @@ def scan_i2c_address(i2c, addrList=[]):
             if addr in devices:
                 print("Device found! Hexa address: ",hex(addr))
 
-def i2c_device(i2c, addr=None):
+def I2C_devices(i2c, addr=None):
     devices = i2c.scan()
     return(addr in devices)
 
@@ -50,5 +50,20 @@ def settime_DS1307():
     ds1307.datetime(now)
     print(ds1307.datetime())
 
+def I2C_AS3935():
+    from time import sleep
+    from lib.DFRobot_AS3935_Lib import DFRobot_AS3935
+    i2c = I2C(I2C_SLOT)
+    AS3935_I2C_ADDR = [0X01, 0X02, 0X03]
+    for addr in AS3935_I2C_ADDR:
+        print("initializing as3935 with I2C address", hex(addr))
+        for retry in range(10):
+            as3935 = DFRobot_AS3935(addr, i2c)
+            if as3935.reset():
+                break
+            print("error initializing as3935", retry)
+            sleep(0.5)
+
 I2C_Test()
+I2C_AS3935()
 #settime_DS1307()
