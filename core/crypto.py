@@ -55,3 +55,19 @@ class Crypto():
     def _padding(self, value): 
         pad = self.blocksize - len(value) % self.blocksize
         return value + " "*pad
+
+# print('\n-------- EXAMPLE ---------')
+# KEY = b'x!A%D*G-KaNdRgUkXp2s5v8y/B?E(H+M'
+# VALUE = "secret"
+
+# print('\n-------- AES-ECB ---------')
+# crypto = Crypto(key=KEY)
+# v = crypto.decrypt("secret")
+# print('AES-ECB decrypted:', v)
+# print('AES-ECB encrypted:', crypto.encrypt(v))
+
+# print('\n-------- AES-CBC ---------')
+# crypto = Crypto(key=KEY,mode=2)
+# v = crypto.encrypt("secret")
+# print('AES-CBC encrypted:', v)
+# print('AES-CBC decrypted:', crypto.decrypt(v))
