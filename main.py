@@ -49,7 +49,7 @@ def init():
     DEBUG
     """
     debug = boot.get("DEBUG")
-
+    test = False
     if debug:
         """
         reset, wake return codes
@@ -63,7 +63,7 @@ def init():
         print("reset cause:", reset_cause())
         print("wake reason:", wake_reason())
         device = boot.get("DEVICE")
-        if device is not None:
+        if device is not None and test:
             print("\n----- DEVICE -----")
             for key, value in device.items(): print("{}: {}".format(key, value))
 
@@ -226,17 +226,12 @@ def init():
     system.save("RTC", rtc)
     system.save("RTC_MODUL", rtc_modul)
     
-    if debug:
+    if test:
         print("\n----- SYSTEM -----")
         for key in system.keys(): print("{}: {}".format(key, system.get(key)))
 
 # init
 init()
-
-gc.collect()
-print("\n----- RAM -----")
-print("heap RAM:", gc.mem_alloc())
-print("free RAM:", gc.mem_free())
 
 # run app
 from app import main

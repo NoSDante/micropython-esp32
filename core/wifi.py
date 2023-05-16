@@ -74,11 +74,16 @@ def get_ap_essid():
 def get_netscan():
     """
     Get the networks found in WLAN
-    """    
+    """
+    # custom functions to get rssi
+    def get_rssi(scans):
+        return scans[3]
     networks = []
     wlan = WLAN(STA_IF)
     if not wlan.active(): wlan.active(True)
     scans = wlan.scan()
+    # sort the list by strongest signal descend
+    scans = sorted(scans, key=lambda x: x[3], reverse=False)
     for scan in scans:
         networks.append(scan[0].decode())
         #print('found essid: ' + scan[0].decode())
