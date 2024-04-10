@@ -4,14 +4,14 @@ from core.database import Database
 # main
 print("main...")
 
+
 def init():
-    
     """
     Define db-files
     """
     BOOT_DATABASE = "/boot.db"
     SYSTEM_DATABASE = "/system.db"
-    
+
     """
     Get init params from boot db-file
     Set default params as fallback
@@ -23,13 +23,13 @@ def init():
         boot = {
             "DEBUG": False,
             "NETWORK":
-            {
-                "WIFI": False,
-                "AP_IF": False,
-                "AP": True
-            }
+                {
+                    "WIFI": False,
+                    "AP_IF": False,
+                    "AP": True
+                }
         }
-    
+
     """
     Default system states
     bool: mounted:   is SD-Card mounted
@@ -73,32 +73,35 @@ def init():
     if boot.get("SDCARD"):
         from core.sdcard import mounting
         sdcard = mounting(
-            slot=boot.get("SDCARD").get("SPI"),           
+            slot=boot.get("SDCARD").get("SPI"),
             path=boot.get("SDCARD").get("PATH"),
             width=boot.get("SDCARD").get("WIDTH"),
             cs=boot.get("SDCARD").get("CS"),
             miso=boot.get("SDCARD").get("MISO"),
-            debug=debug  
-            )
+            debug=debug
+        )
 
     """
     NETWORK
     """
     if boot.get("NETWORK"):
         print("\nnetwork...")
-        from core.wifi import smart_connect, connect, disconnect, is_connected, get_ip, get_essid, get_ap_ip, start_ap, stop_ap
+        from core.wifi import smart_connect, connect, disconnect, is_connected, get_ip, get_essid, get_ap_ip, start_ap, \
+            stop_ap
         network = boot.get("NETWORK")
         ap_if = network.get("AP_IF")
         ap_start = False
         if network.get("WIFI") or network.get("FOR_TIMESYNC"):
-            #stop_ap()
+            # stop_ap()
             wifi = network.get("WIFI")
             reconnect = network.get("RECONNECT")
             timezone = boot.get("TIMEZONE")
             if timezone: utc = timezone.get("UTC")
             smart = network.get("SMART")
-            if smart: smart_connect()
-            else: connect()
+            if smart:
+                smart_connect()
+            else:
+                connect()
             if is_connected():
                 connected = True
                 ip = get_ip()
@@ -176,11 +179,11 @@ def init():
                     # probably correct
                     if debug: print(rtc_modul, ds1307.datetime())
                     dt = ds1307.datetime()
-                    #( year,month,day,weekday,hour,minute,second,microsecond )
+                    # ( year,month,day,weekday,hour,minute,second,microsecond )
                     RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
                     timesync = True
                     if debug: print("RTC", RTC().datetime())
-                    
+
         if rtc_modul.lower() == "ds3231":
             try:
                 from lib.ds3231 import DS3231
@@ -189,7 +192,7 @@ def init():
                 print("cannot import module", e)
             # synchronize RTC
             if timesync:
-                ds3231.DateTime(RTC().datetime())                
+                ds3231.DateTime(RTC().datetime())
                 if debug: print("synchronized RTC", ds3231.DateTime())
             else:
                 # initialize RTC
@@ -201,7 +204,7 @@ def init():
                     # probably correct
                     if debug: print(rtc_modul, ds3231.DateTime())
                     dt = ds3231.DateTime()
-                    #( year,month,day,weekday,hour,minute,second,microsecond )
+                    # ( year,month,day,weekday,hour,minute,second,microsecond )
                     RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
                     timesync = True
                     if debug: print("RTC", RTC().datetime())
@@ -225,14 +228,16 @@ def init():
     system.save("UTC", utc)
     system.save("RTC", rtc)
     system.save("RTC_MODUL", rtc_modul)
-    
+
     if test:
         print("\n----- SYSTEM -----")
         for key in system.keys(): print("{}: {}".format(key, system.get(key)))
+
 
 # init
 init()
 
 # run app
 from app import main
+
 main()

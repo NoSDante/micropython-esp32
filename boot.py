@@ -7,7 +7,7 @@ print('boot...')
 def no_debug():
     import esp
     esp.osdebug(None)
-    
+
 if not "boot.db" in listdir():
     print('setup...')
     try:
@@ -16,4 +16,4 @@ if not "boot.db" in listdir():
     except Exception as e:
         raise Exception("setup failed", e)
 
-#no_debug()
+# no_debug()
