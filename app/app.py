@@ -105,6 +105,7 @@ async def runReconnect(interval=3600, interval_if=600, retrys=3):
                     start_ap()
                     state.set("ap_ip_address", get_ap_ip())
 
+
 # Logger loop
 async def runLogger(sensor, config):
     gc.collect()

@@ -4,14 +4,14 @@ from core.database import Database
 # main
 print("main...")
 
+"""
+Define db-files
+"""
+BOOT_DATABASE = "/boot.db"
+SYSTEM_DATABASE = "/system.db"
+
 
 def init():
-    """
-    Define db-files
-    """
-    BOOT_DATABASE = "/boot.db"
-    SYSTEM_DATABASE = "/system.db"
-
     """
     Get init params from boot db-file
     Set default params as fallback
@@ -41,7 +41,8 @@ def init():
     int:  utc:       set a timezone
     int:  reconnect: time for WiFi try-reconnecting loop 0=off
     """
-    debug, sdcard, wifi, smart, connected, ap, ap_if, timesync, rtc = False, False, False, False, False, False, False, False, False
+    debug, sdcard, rtc, timesync = False, False, False, False
+    wifi, smart, connected, ap, ap_if, = False, False, False, False, False
     ip_address, ap_ip_address, rtc_modul, essid = "0.0.0.0", "0.0.0.0", "", ""
     reconnect, utc = 0, 0
 

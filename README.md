@@ -107,8 +107,7 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 ```
 <details><summary>boot.json</summary>
 <p>
-	
-	```
+
 	{
 	    "DEBUG"   : true,
 	    "TIMEZONE": {
@@ -152,7 +151,7 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 		"FREQ" : 400000
 	    }
 	}
-	```
+
 </p>
 </details>
 
