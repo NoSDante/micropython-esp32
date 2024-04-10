@@ -1,0 +1,1 @@
+(()=>{"use strict";var __webpack_modules__={177:()=>{eval("// extracted by mini-css-extract-plugin\n\n\n//# sourceURL=webpack://package/./src/css/style.css?")}},__webpack_exports__={};__webpack_modules__[177]()})();

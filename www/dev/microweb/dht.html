@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+</head>
+<body>
+
+<h1>MicroPython DHT-22 Sensor</h1>
+<div id="result" style="color: SlateBlue; font-size: 200%; font-family: Monaco, monospace; margin: 20px"></div>
+
+<script>
+if(typeof(EventSource) !== 'undefined') {
+    const source = new EventSource('http://' + window.location.hostname + '/dht');
+    source.onmessage = function(e) {
+        document.getElementById("result").innerHTML = e.data;
+    };
+} else {
+    document.getElementById("result").innerHTML = "Sorry, your browser does not support server-sent events...";
+}
+</script>
+
+</body>
+</html>
