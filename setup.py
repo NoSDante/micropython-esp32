@@ -12,6 +12,7 @@ def setup():
     Get data from JSON-File
     Save data to DB-File
     """
+
     def setConfig(db_file, json_files, path="/config/", delete_json=False, delete_db=False):
         database = Database(database=db_file, pagesize=1024, delete=delete_db, create=True)
         database.clear()
