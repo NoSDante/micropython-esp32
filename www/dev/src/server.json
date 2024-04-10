@@ -1,8 +1,0 @@
-{
-    "url": "",
-    "base_url": "http://192.168.2.",
-    "base_start": 100,
-    "base_end": 113,
-    "name": "MicroWebSrv2",
-    "port": ":8080"
-}
