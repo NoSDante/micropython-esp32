@@ -1,0 +1,7 @@
+print()
+print('       ----------------------------')
+print('       - Python esp32 AirMonitor  -')
+print('       -      version 2.0.0       -')
+print('       -     by André Schepers    -')
+print('       ----------------------------')
+print()

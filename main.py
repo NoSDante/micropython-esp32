@@ -87,8 +87,7 @@ def init():
     """
     if boot.get("NETWORK"):
         print("\nnetwork...")
-        from core.wifi import smart_connect, connect, disconnect, is_connected, get_ip, get_essid, get_ap_ip, start_ap, \
-            stop_ap
+        from core.wifi import smart_connect, connect, disconnect, is_connected, get_ip, get_essid, get_ap_ip, start_ap
         network = boot.get("NETWORK")
         ap_if = network.get("AP_IF")
         ap_start = False
@@ -160,55 +159,60 @@ def init():
             sda=Pin(boot.get("I2C").get("SDA"))
         )
         rtc_modul = boot.get("RTC").get("MODUL")
+        # DS1307
         if rtc_modul.lower() == "ds1307":
+            ds1307 = None
             try:
                 from lib.ds1307 import DS1307
                 ds1307 = DS1307(i2c)
             except ImportError as e:
                 print("cannot import module", e)
             # synchronize RTC
-            if timesync:
-                ds1307.datetime(RTC().datetime())
-                if debug: print("synchronized RTC", ds1307.datetime())
-            else:
-                # initialize RTC
-                if debug: print("RTC Modul:", rtc_modul)
-                rtc = True
-                if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
-                    rtc_modul = "SETTIME"
+            if ds1307 is not None:
+                if timesync:
+                    ds1307.datetime(RTC().datetime())
+                    if debug: print("synchronized RTC", ds1307.datetime())
                 else:
-                    # probably correct
-                    if debug: print(rtc_modul, ds1307.datetime())
-                    dt = ds1307.datetime()
-                    # ( year,month,day,weekday,hour,minute,second,microsecond )
-                    RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
-                    timesync = True
-                    if debug: print("RTC", RTC().datetime())
-
+                    # initialize RTC
+                    if debug: print("RTC Modul:", rtc_modul)
+                    rtc = True
+                    if ds1307.datetime() == "2000, 1, 1, 0, 0, 0, 0, 0":
+                        rtc_modul = "SETTIME"
+                    else:
+                        # probably correct
+                        if debug: print(rtc_modul, ds1307.datetime())
+                        dt = ds1307.datetime()
+                        # ( year,month,day,weekday,hour,minute,second,microsecond )
+                        RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
+                        timesync = True
+                        if debug: print("RTC", RTC().datetime())
+        # DS3231
         if rtc_modul.lower() == "ds3231":
+            ds3231 = None
             try:
                 from lib.ds3231 import DS3231
                 ds3231 = DS3231(i2c)
             except ImportError as e:
                 print("cannot import module", e)
-            # synchronize RTC
-            if timesync:
-                ds3231.DateTime(RTC().datetime())
-                if debug: print("synchronized RTC", ds3231.DateTime())
-            else:
-                # initialize RTC
-                if debug: print("RTC Modul:", rtc_modul)
-                rtc = True
-                if ds3231.DateTime() == "2000, 1, 1, 0, 0, 0, 0, 0":
-                    rtc_modul = "SETTIME"
-                else:
-                    # probably correct
-                    if debug: print(rtc_modul, ds3231.DateTime())
-                    dt = ds3231.DateTime()
-                    # ( year,month,day,weekday,hour,minute,second,microsecond )
-                    RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
-                    timesync = True
-                    if debug: print("RTC", RTC().datetime())
+                if ds1307 is not None:
+                    # synchronize RTC
+                    if timesync:
+                        ds3231.DateTime(RTC().datetime())
+                        if debug: print("synchronized RTC", ds3231.DateTime())
+                    else:
+                        # initialize RTC
+                        if debug: print("RTC Modul:", rtc_modul)
+                        rtc = True
+                        if ds3231.DateTime() == "2000, 1, 1, 0, 0, 0, 0, 0":
+                            rtc_modul = "SETTIME"
+                        else:
+                            # probably correct
+                            if debug: print(rtc_modul, ds3231.DateTime())
+                            dt = ds3231.DateTime()
+                            # ( year,month,day,weekday,hour,minute,second,microsecond )
+                            RTC().init((dt[0], dt[1], dt[2], dt[3], dt[4], dt[5], dt[6], 0))
+                            timesync = True
+                            if debug: print("RTC", RTC().datetime())
 
     """
     Save states
@@ -239,6 +243,6 @@ def init():
 init()
 
 # run app
-from app import main
+from app.app import main
 
 main()

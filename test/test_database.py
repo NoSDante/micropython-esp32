@@ -1,7 +1,6 @@
 from core.database import Database
 import time
 
-
 start = time.time()
 
 db = "/test.db"
@@ -11,6 +10,7 @@ print(db)
 
 print("----- INIT -----")
 database = Database(db, delete=True, create=True)
+print(database)
 database = Database(db)
 print(database)
 
@@ -42,7 +42,6 @@ print("----- GET ALL -----")
 return object as json
 """
 print(database.get())
-
 
 print("----- TYPES -----")
 """
@@ -104,6 +103,6 @@ try:
     Database("/test.db", create=False)
 except Exception as e:
     print(e)
-    
+
 print("\n----- TEST FINISHED -----")
-print("execution time: " +str(time.time()-start)+ " sec")
+print("execution time: " + str(time.time() - start) + " sec")
