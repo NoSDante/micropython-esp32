@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Die 3 Meta-Tags oben *müssen* zuerst im head stehen; jeglicher sonstiger head-Inhalt muss *nach* diesen Tags kommen -->
+    <meta name="description" content="Webinterface for ESP32" />
+    <meta name="author" content="André Schepers" />
+    <link rel="icon" href="favicon.ico" />
+
+    <!-- Title -->
+    <title>ESP32 Webinterface</title>
+
+    <!-- Bootstrap-CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href=('dist/css/bootstrap.min.css');" />
+    <!-- mCustomScrollbar CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='dist/css/jquery.mCustomScrollbar.min.css';" />
+
+    <!-- Custom Theme -->
+    <link href="css/style.css" rel="stylesheet" />
+</head>
+
+<body>
+    <canvas id="pageloading" class="position-absolute bottom-50 end-50" width="200px" height="200px"></canvas>
+    <script>
+        var points = [],
+            velocity2 = 5, // velocity squared
+            canvas =
+            document.getElementById('pageloading'),
+            context = canvas.getContext('2d'),
+            radius = 5,
+            boundaryX = 200,
+            boundaryY = 200,
+            numberOfPoints = 30;
+
+        init();
+
+        function init() {
+            // create points
+            for (var i = 0; i < numberOfPoints; i++) {
+                createPoint();
+            }
+            // create connections
+            for (var i = 0, l = points.length; i < l; i++) {
+                var point = points[i];
+                if (i == 0) {
+                    points[i].buddy = points[points.length - 1];
+                } else {
+                    points[i].buddy = points[i - 1];
+                }
+            }
+
+            // animate
+            animate();
+        }
+
+        function createPoint() {
+            var point = {},
+                vx2, vy2;
+            point.x = Math.random() * boundaryX;
+            point.y = Math.random() * boundaryY;
+            // random vx 
+            point.vx = (Math.floor(Math.random()) * 2 - 1) * Math.random();
+            vx2 = Math.pow(point.vx, 2);
+            // vy^2 = velocity^2 - vx^2
+            vy2 = velocity2 - vx2;
+            point.vy = Math.sqrt(vy2) * (Math.random() * 2 - 1);
+            points.push(point);
+        }
+
+        function resetVelocity(point, axis, dir) {
+            var vx, vy;
+            if (axis == 'x') {
+                point.vx = dir * Math.random();
+                vx2 = Math.pow(point.vx, 2);
+                // vy^2 = velocity^2 - vx^2
+                vy2 = velocity2 - vx2;
+                point.vy = Math.sqrt(vy2) * (Math.random() * 2 - 1);
+            } else {
+                point.vy = dir * Math.random();
+                vy2 = Math.pow(point.vy, 2);
+                // vy^2 = velocity^2 - vx^2
+                vx2 = velocity2 - vy2;
+                point.vx = Math.sqrt(vx2) * (Math.random() * 2 - 1);
+            }
+        }
+
+        function drawCircle(x, y) {
+            context.beginPath();
+            context.arc(x, y, radius, 0, 2 * Math.PI, false);
+            context.fillStyle = '#97badc';
+            context.fill();
+        }
+
+        function drawLine(x1, y1, x2, y2) {
+            context.beginPath();
+            context.moveTo(x1, y1);
+            context.lineTo(x2, y2);
+            context.strokeStyle = '#8ab2d8'
+            context.stroke();
+        }
+
+        function draw() {
+            for (var i = 0, l = points.length; i < l; i++) {
+                // circles
+                var point = points[i];
+                point.x += point.vx;
+                point.y += point.vy;
+                drawCircle(point.x, point.y);
+                // lines
+                drawLine(point.x, point.y, point.buddy.x, point.buddy.y);
+                // check for edge
+                if (point.x < 0 + radius) {
+                    resetVelocity(point, 'x', 1);
+                } else if (point.x > boundaryX - radius) {
+                    resetVelocity(point, 'x', -1);
+                } else if (point.y < 0 + radius) {
+                    resetVelocity(point, 'y', 1);
+                } else if (point.y > boundaryY - radius) {
+                    resetVelocity(point, 'y', -1);
+                }
+            }
+        }
+
+        function animate() {
+            context.clearRect(0, 0, 200, 200);
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        /** INIT FEATURES */
+        // init = function() {
+        //     dashboard.init();
+        //     bootmgr.init();
+        //     sensor.init();
+        // }
+    </script>
+    <script src="js/features.js"></script>
+
+    <!-- Toast -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div id="messagePage" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-dark text-white">
+                <img src="" class="rounded me-2" alt="">
+                <strong id="messageType" class="me-auto">Info</strong>
+                <small id="messageTime">--:--:--</small>
+                <button type="button" class="btn-close bg-light" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div id="messageContent" class="toast-body text-white"></div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="resetModal" class="modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reset</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>ESP neustarten?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="resetButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-primary">Reset</button>
+                    <button type="button" class="btn btn-secondary bg-danger" data-bs-dismiss="modal">Abbrechen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="rebootModal" class="modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Setup</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Konfigurationen beim Neustart initialisieren.</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="rebootButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-primary">Setup & Reset</button>
+                    <button id="setupButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-primary">Setup</button>
+                    <button type="button" class="btn btn-secondary bg-danger" data-bs-dismiss="modal">Abbrechen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="wifiModal" class="modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">WiFi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning  d-flex align-items-center" role="alert">
+                        Das Webinterface ist möglicherweise nicht mehr erreichbar, wenn die WiFi-Funktion deaktiviert wird!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="wifiOnButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-success">WiFi aktivieren</button>
+                    <button id="wifiOffButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-warning">WiFi deaktivieren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="apModal" class="modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Acces Point</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning  d-flex align-items-center" role="alert">
+                        Das Webinterface ist möglicherweise nicht mehr erreichbar, wenn der Acces Point deaktiviert wird!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="apOnButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-success">Acces Point aktivieren</button>
+                    <button id="apOffButton" type="button" data-bs-dismiss="modal" class="btn btn-primary bg-warning">Access Point deaktivieren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wrapper -->
+    <div class="wrapper visually-hidden">
+        <!-- Navigation -->
+        <navigation>
+            <!-- Sidebar -->
+            <nav id="sidebar">
+                <!-- Sidebar-Header -->
+                <div class="sidebar-header">
+                    <div class="sidebar-logo">
+                        <figure>
+                            <a href="#"><img class="micropython-logo" src="img/esp-logo.png" alt="ESP32 Logo" /></a>
+                        </figure>
+                    </div>
+                </div>
+                <!-- Navbar-Items -->
+                <ul class="list-unstyled components">
+                    <li class="active">
+                        <a href="#"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    </li>
+                    <li>
+                        <a href="#"><i class="fas fa-wifi"></i> WiFi Manager</a>
+                    </li>
+                    <li>
+                        <a href="#"><i class="fas fa-broadcast-tower"></i> Access Point</a>
+                    </li>
+                    <li>
+                        <a href="#pageSubmenuOne" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="pageSubmenuOne" class="dropdown-toggle"><i class="fas fa-microchip"></i> Sensoren</a>
+                        <ul class="collapse list-unstyled" id="pageSubmenuOne">
+                            <li>
+                                <a href="#">SPS30</a>
+                            </li>
+                            <li>
+                                <a href="#">SDC30</a>
+                            </li>
+                            <li>
+                                <a href="#">SGP40</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="#pageSubmenuTwo" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="pageSubmenuTwo" class="dropdown-toggle"><i class="fas fa-toolbox"></i> Konfiguration</a>
+                        <ul class="collapse list-unstyled" id="pageSubmenuTwo">
+                            <li>
+                                <a href="#">Bootconfig</a>
+                            </li>
+                            <li>
+                                <a href="#">Networks</a>
+                            </li>
+                            <li>
+                                <a href="#">Application</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="list-unstyled CTAs">
+                    <li>
+                        <a href="https://bootstrapious.com/tutorial/files/sidebar.zip" class="download">Download
+                            source</a>
+                    </li>
+                    <li>
+                        <a href="https://bootstrapious.com/p/bootstrap-sidebar" class="article">Back to article</a>
+                    </li>
+                </ul>
+            </nav>
+            <!-- \nav -->
+        </navigation>
+        <!-- \navigation -->
+
+        <!-- Page Content -->
+        <div id="content">
+
+            <!-- Header -->
+            <header class="header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <!-- Sidebar-Toggle -->
+                        <div class="col-2">
+                            <nav class="navbar navbar-expand-lg">
+                                <button type="button" aria-label="Navigation" id="sidebarCollapse" class="navbar-btn" style="min-width: 40px;">
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
+                                </button>
+                            </nav>
+                        </div>
+                        <div class="col justify-content-md-center">
+                            <!-- Header-Title -->
+                            <div class="text-center header-title">ESP32 <span>Webinterface</span></div>
+                        </div>
+                    </div>
+                </div>
+                <!--\.container-fluid-->
+            </header>
+            <!--\header-->
+
+            <!-- Main -->
+            <div class="container-fluid" id="main">
+                <div id="notConnected" class="alert alert-danger visually-hidden mb-5" role="alert">
+                    Server is not connected!
+                </div>
+                <div id="listServer" class="alert alert-warning visually-hidden mb-5" role="alert">
+                </div>
+                <div id="pageInfo" class="alert alert-primary visually-hidden mb-5" role="alert">
+                </div>
+
+                <!-- Dashboard -->
+                <div id="dashboard" class="row">
+                    <div class="col-12 mb-5">
+                        <h2>Dashboard <i class="fas fa-tachometer-alt"></i></h2>
+                    </div>
+                    <div class="dash-item col-xl-3 col-sm-6 col-lg-6 col-12 reset-item">
+                        <div class="card text-center rounded h-100">
+                            <div class="card-body">
+                                <i class="fa-solid fa-gear fa-2x text-dark" aria-hidden="true"></i>
+                                <h4 class="card-title mt-3">Reset</h4>
+                                <p class="card-text">Reset the machine</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dash-item col-xl-3 col-sm-6 col-lg-6 col-12 setup-item">
+                        <div class="card text-center rounded h-100">
+                            <div class="card-body">
+                                <i class="fa-solid fa-compact-disc fa-2x text-dark" aria-hidden="true"></i>
+                                <h4 class="card-title mt-3">Setup</h4>
+                                <p class="card-text">Setup on reset</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dash-item col-xl-3 col-sm-6 col-lg-6 col-12 wifi-item">
+                        <div class="card text-center rounded h-100">
+                            <div class="card-body">
+                                <i class="fas fa-wifi fa-2x faWifi" aria-hidden="true"></i>
+                                <h4 class="card-title mt-3">WiFi</h4>
+                                <p class="card-text wifiState"></p>
+                                <!-- <p class="visually-hidden dash-label fs-3">ON</p> -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dash-item col-xl-3 col-sm-6 col-lg-6 col-12 ap-item">
+                        <div class="card text-center rounded h-100">
+                            <div class="card-body">
+                                <i class="fas faAp fa-broadcast-tower fa-2x" aria-hidden="true"></i>
+                                <h4 class="card-title mt-3">Access Point</h4>
+                                <p class="card-text apState"></p>
+                                <!-- <p class="visually-hidden dash-label fs-3">OFF</p> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="line"></div>
+
+                <!-- Systemstate -->
+                <div id="systemstate" class="row">
+                    <div class="col">
+                        <button class="btn btn-lg btn-light border border-dark dropdown-toggle fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSystemstate" aria-expanded="false" aria-controls="collapseSystemstate">
+                            <i class="fa-solid fa-table"></i> Systemstate
+                        </button>
+                        <p>
+                            <div class="collapse" id="collapseSystemstate">
+                                <div class="card card-body">
+                                    <div id="systemstateAlert" class="alert alert-warning" role="alert">
+                                        No data loaded!
+                                    </div>
+                                    <table id="systemstateTable" class="table table-striped visually-hidden">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Key</th>
+                                                <th scope="col">Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </p>
+                    </div>
+                </div>
+                <div class="line"></div>
+
+                <div id="bootmanager" class="row">
+                    <div class="col-12 mb-5">
+                        <h3>Boot Konfiguration <i class="fas fa-toolbox"></i></h3>
+                    </div>
+                    <div class="col">
+                        <div class="card mb-3" style="background-color: #fafafa;">
+                            <div class="card-body">
+                                <div class="form-check form-switch form-switch-md">
+                                    <input name="debug" class="form-check-input float-none mr-5" type="checkbox" role="switch" id="DebugSwitchCheck" />
+                                    <label class="form-check-label fw-bold fs-5" for="DebugSwitchCheck">Debug Modus</label>
+                                    <span class="check-label object-label badge fs-6"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-flush border border-2" id="accordionBootConfig">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="flush-headingOne">
+                                    <button class="accordion-button collapsed fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                                          Network
+                                    </button>
+                                </h2>
+                                <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionBootConfig">
+                                    <div class="accordion-body">
+                                        <div class="card mb-3" style="background-color: #fafafa;">
+                                            <div class="card-body">
+                                                <div class="form-check form-switch form-switch-md">
+                                                    <input name="network" class="form-check-input float-none" type="checkbox" role="switch" id="NetworkSwitchCheck" />
+                                                    <label class="form-check-label fw-bold fs-5" for="NetworkSwitchCheck">Network</label>
+                                                    <span class="check-label object-label badge fs-6"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="editNETWORK">
+                                            <div class="table-responsive table-config mb-3">
+                                                <table class="table table-hover table-nowrap">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th scope="col">Parameter</th>
+                                                            <th scope="col">Value</th>
+                                                            <th scope="col">Edit</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row">WiFi</th>
+                                                            <td>
+                                                                <h5><span class="check-label badge"></span></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check form-switch form-switch-md">
+                                                                    <input name="wifi" class="switch-on form-check-input" type="checkbox" role="switch" id="WiFiSwitch" />
+                                                                </div>
+                                                            </td>
+
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Smart <span data-bs-toggle="tooltip" data-bs-placement="top" title="Ablgeich zwischen WLAN-Scan und allen gespeicherten Netzwerken zur Verbindungsherstellung!"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5><span class="check-label badge"></span></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check form-switch form-switch-md">
+                                                                    <input name="smart" class="switch-on form-check-input" type="checkbox" role="switch" id="SmartConnectSwitch" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr id="AccessPointControll">
+                                                            <th scope="row">Access Point</th>
+                                                            <td>
+                                                                <h5><span class="check-label badge"></span></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check form-switch form-switch-md">
+                                                                    <input name="ap" class="switch-on form-check-input" type="checkbox" role="switch" id="AccessPointSwitch" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr id="AccessPointIFControll">
+                                                            <th scope="row">Access Point Fallback <span data-bs-toggle="tooltip" data-bs-placement="top" title="Der Access Point wird als Fallback initialisiert, wenn eine drahtlose Neztwerkverbindung nicht hergestellt werden konnte!"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5><span class="check-label badge"></span></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check form-switch form-switch-md">
+                                                                    <input name="ap_if" class="switch-on form-check-input" type="checkbox" role="switch" id="AccessPointIFSwitch" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr id="ForTimesyncControll">
+                                                            <th scope="row">For Timesync <span data-bs-toggle="tooltip" data-bs-placement="top" title="Neztwerkverbindung wird temporär zur synchronisierung der Uhrzeit hergestellt!"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5><span class="check-label badge"></span></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check form-switch form-switch-md">
+                                                                    <input name="for_timesync" class="switch-on form-check-input" type="checkbox" role="switch" id="ForTimesyncSwitch" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr id="Reconnect">
+                                                            <th scope="row">Reconnect <span data-bs-toggle="tooltip" data-bs-placement="top" title="Interval zur WiFi Verbindungsprüfung in Sekunden, 0=off!"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                                <div class="input-group input-group-lg" style="min-width: 90px;">
+                                                                    <input name="reconnect" min="0" max="14400" type="number" class="form-control visually-hidden">
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <!-- <div class="input-group input-group-lg w-75" style="min-width: 90px;">
+                                                                    <input name="reconnect" min="0" max="14400" type="number" class="form-control">
+                                                                </div> -->
+                                                                <button type="button" class="btn btn-light">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="row">
+                                                <label for="default" class="col-3 col-form-label fw-bold fs-6">Default</label>
+                                                <div class="col-9">
+                                                    <div class="input-group mb-3">
+                                                        <input class="form-control" id="default" name="default">
+                                                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                                        <ul class="dropdown-menu dropdown-menu-end" id="selectDefaultNetwork">
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="flush-headingTwo">
+                                    <button class="accordion-button collapsed fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
+                                    SDCard
+                                </button>
+                                </h2>
+                                <div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo" data-bs-parent="#accordionBootConfig">
+                                    <div class="accordion-body">
+                                        <div class="card mb-3" style="background-color: #fafafa;">
+                                            <div class="card-body">
+                                                <div class="form-check form-switch form-switch-md">
+                                                    <input name="sdcard" class="form-check-input float-none" type="checkbox" role="switch" id="SDCardSwitchCheck" />
+                                                    <label class="form-check-label fw-bold fs-5 check-label" for="SDCardSwitchCheck">SDCard</label>
+                                                    <span class="check-label object-label badge fs-6"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="editSDCARD">
+                                            <div class="table-responsive table-config mb-3">
+                                                <table class="table table-hover table-nowrap">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th scope="col">Parameter</th>
+                                                            <th scope="col">Value</th>
+                                                            <th scope="col">Edit</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row">SPI <span data-bs-toggle="tooltip" data-bs-placement="top" title="slot selects which of the available interfaces to use. Leaving this unset will select the default interface."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <select name="spi" class="form-select form-select-lg w-50" aria-label=".form-select-lg" style="min-width: 70px;">
+                                                                <option value="0">0</option>
+                                                                <option value="1">1</option>
+                                                                <option value="2">2</option>
+                                                                <option value="3">3</option>
+                                                                </select>
+                                                            </td>
+
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Width <span data-bs-toggle="tooltip" data-bs-placement="top" title="width selects the bus width for the SD/MMC interface"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <select name="width" class="form-select form-select-lg w-50" aria-label=".form-select-lg" style="min-width: 70px;">
+                                                                <option value="1">1</option>
+                                                                <option value="4">4</option>
+                                                                <option value="8">8</option>
+                                                                </select>
+                                                            </td>
+                                                        </tr>
+                                                        <tr id="MisoControll">
+                                                            <th scope="row">MISO <span data-bs-toggle="tooltip" data-bs-placement="top" title="miso can be used to specify an SPI miso pin."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-lg w-50">
+                                                                    <input name="miso" min="0" max="39" type="number" class="form-control" style="min-width: 70px;">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr id="CSControll">
+                                                            <th scope="row">CS <span data-bs-toggle="tooltip" data-bs-placement="top" title="cs can be used to specify an SPI chip select pin."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-lg w-50">
+                                                                    <input name="cs" min="0" max="39" type="number" class="form-control" style="min-width: 70px;">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="row">
+                                                <label for="path" class="col-3 col-form-label fw-bold fs-6">Path</label>
+                                                <div class="col-9">
+                                                    <div class="input-group mb-3">
+                                                        <input class="form-control" name="path" id="path">
+                                                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                                        <ul class="dropdown-menu dropdown-menu-end" id="selectPath">
+                                                            <li><a class="dropdown-item">/sd</a></li>
+                                                            <li><a class="dropdown-item">/www</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="flush-headingThree">
+                                    <button class="accordion-button collapsed fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseThree" aria-expanded="false" aria-controls="flush-collapseThree">
+                                    I2C
+                                </button>
+                                </h2>
+                                <div id="flush-collapseThree" class="accordion-collapse collapse" aria-labelledby="flush-headingThree" data-bs-parent="#accordionBootConfig">
+                                    <div class="accordion-body">
+                                        <div class="card mb-3" style="background-color: #fafafa;">
+                                            <div class="card-body">
+                                                <div class="form-check form-switch form-switch-md">
+                                                    <input name="i2c" class="form-check-input float-none" type="checkbox" role="switch" id="I2CSwitchCheck" />
+                                                    <label class="form-check-label fw-bold fs-5 check-label" for="I2CSwitchCheck">I2C</label>
+                                                    <span class="check-label object-label badge fs-6"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="editI2C">
+                                            <div class="table-responsive table-config mb-3">
+                                                <table class="table table-hover table-nowrap">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th scope="col">Parameter</th>
+                                                            <th scope="col">Value</th>
+                                                            <th scope="col">Edit</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row">Slot <span data-bs-toggle="tooltip" data-bs-placement="top" title="id identifies a particular I2C peripheral. Allowed values for depend on the particular port/board"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <select name="slot" class="form-select form-select-lg w-50" aria-label=".form-select-lg" style="min-width: 70px;">
+                                                                <option value="0">0</option>
+                                                                <option value="1">1</option>
+                                                                </select>
+                                                            </td>
+
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">SDA <span data-bs-toggle="tooltip" data-bs-placement="top" title="da should be a pin object specifying the pin to use for SDA."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-lg w-50">
+                                                                    <input name="sda" min="0" max="39" type="number" class="form-control" style="min-width: 70px;">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">SCL <span data-bs-toggle="tooltip" data-bs-placement="top" title="scl should be a pin object specifying the pin to use for SCL."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-lg w-50">
+                                                                    <input name="scl" min="0" max="39" type="number" class="form-control" style="min-width: 70px;">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Frequenz <span data-bs-toggle="tooltip" data-bs-placement="top" title="freq should be an integer which sets the maximum frequency for SCL."><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-lg w-50">
+                                                                    <input name="freq" min="0" max="400000" type="number" class="form-control" style="min-width: 125px;">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="flush-headingFour">
+                                    <button class="accordion-button collapsed fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFour" aria-expanded="false" aria-controls="flush-collapseFour">
+                                    Timezone
+                                </button>
+                                </h2>
+                                <div id="flush-collapseFour" class="accordion-collapse collapse" aria-labelledby="flush-headingFour" data-bs-parent="#accordionBootConfig">
+                                    <div class="accordion-body">
+                                        <div class="card mb-3" style="background-color: #fafafa;">
+                                            <div class="card-body">
+                                                <div class="form-check form-switch form-switch-md">
+                                                    <input name="timezone" class="form-check-input float-none" type="checkbox" role="switch" id="TimezoneSwitchCheck" />
+                                                    <label class="form-check-label fw-bold fs-5 check-label" for="TimezoneSwitchCheck">Timezone</label>
+                                                    <span class="check-label object-label badge fs-6"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="editTIMEZONE">
+                                            <div class="table-responsive table-config mb-3">
+                                                <table class="table table-hover table-nowrap">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th scope="col">Parameter</th>
+                                                            <th scope="col">Value</th>
+                                                            <th scope="col">Edit</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row">UTC <span data-bs-toggle="tooltip" data-bs-placement="top" title="Universal Time Coordinated"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <select name="utc" class="form-select form-select-lg w-50" aria-label=".form-select-lg" style="min-width: 70px;">
+                                                                <option key="zone" data="MESZ - Mitteleuropäische Winterzeit (UTC+1)" value="1">1</option>
+                                                                <option key="zone" data="MESZ - Mitteleuropäische Sommerzeit (UTC+2)" value="2">2</option>
+                                                                <option key="zone" value="3">3</option>
+                                                                <option key="zone" value="4">4</option>
+                                                                <option key="zone" value="5">5</option>
+                                                                <option key="zone" value="6">6</option>
+                                                                </select>
+                                                            </td>
+
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Zone</th>
+                                                            <td colspan="2">
+                                                                <h5 class="text-label"></h5>
+                                                                <div class="input-group input-group-lg">
+                                                                    <input name="zone" class="form-control visually-hidden">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="flush-headingFive">
+                                    <button class="accordion-button collapsed fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFive" aria-expanded="false" aria-controls="flush-collapseFive">
+                                    RTC
+                                </button>
+                                </h2>
+                                <div id="flush-collapseFive" class="accordion-collapse collapse" aria-labelledby="flush-headingFive" data-bs-parent="#accordionBootConfig">
+                                    <div class="accordion-body">
+                                        <div class="card mb-3" style="background-color: #fafafa;">
+                                            <div class="card-body">
+                                                <div class="form-check form-switch form-switch-md">
+                                                    <input name="rtc" class="form-check-input float-none" type="checkbox" role="switch" id="RTCSwitchCheck" />
+                                                    <label class="form-check-label fw-bold fs-5 check-label" for="RTCSwitchCheck">RTC</label>
+                                                    <span class="check-label object-label badge fs-6"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="editRTC">
+                                            <div class="table-responsive table-config mb-3">
+                                                <table class="table table-hover table-nowrap">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th scope="col">Parameter</th>
+                                                            <th scope="col">Value</th>
+                                                            <th scope="col">Edit</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row">Modul <span data-bs-toggle="tooltip" data-bs-placement="top" title="id identifies a particular I2C peripheral. Allowed values for depend on the particular port/board"><i class="fa-solid fa-circle-info fa-xl"></i></span></th>
+                                                            <td>
+                                                                <h5 class="text-label"></h5>
+                                                            </td>
+                                                            <td>
+                                                                <select name="modul" class="form-select form-select-lg" aria-label=".form-select-lg" style="min-width: 140px;">
+                                                                <option value="DS1307">DS1307</option>
+                                                                </select>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="box">
+                        <button id="saveAndBoot" type="button" class="float-end btn btn-lg btn-warning mt-3" disabled>Speichern & Restart</button>
+                        <button id="loadBootConfig" type="button" class="float-end btn btn-lg btn-primary mt-3">Laden</button>
+                        <button id="saveBootConfig" type="button" class="float-end btn btn-lg btn-success mt-3" disabled>Speichern</button>
+                    </div>
+                    <div class="line"></div>
+                </div>
+
+                <div id="sensor row">
+                    <div class="col-12 mb-5">
+                        <h3>Sensoren <i class="fas fa-microchip"></i></h3>
+                    </div>
+                    <button id="loadSensors" type="button" class="btn btn-light border border-dark mb-5">Sensoren starten</button>
+                    <div id="bme680" class="visually-hidden">
+                        <div class="col">
+                            <h4>BME680</h4><small class="text-muted">Last updated 3 mins ago</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body">
+                                        <div class="row text-nowrap">
+                                            <div class="col-8">
+                                                <h5 class="card-title">Temperatur</h5>
+                                            </div>
+                                            <div class="col-4">
+                                                <span>
+                                                <svg class="svg-icon svg-temperature" viewBox="0 0 20 20">
+                                                    <path fill="none"
+                                                        d="M10.867,12.751V7.4c0-0.478-0.388-0.866-0.866-0.866S9.134,6.923,9.134,7.4v5.351c-1.008,0.357-1.733,1.316-1.733,2.448c0,1.436,1.164,2.599,2.6,2.599c1.435,0,2.599-1.163,2.599-2.599C12.6,14.067,11.876,13.108,10.867,12.751
+                                    M12.6,11.739V3.068c0-1.436-1.164-2.6-2.599-2.6c-1.436,0-2.6,1.164-2.6,2.6v8.671c-1.05,0.79-1.733,2.044-1.733,3.46c0,2.393,1.939,4.332,4.333,4.332c2.392,0,4.333-1.939,4.333-4.332C14.333,13.783,13.65,12.529,12.6,11.739 M10,18.665c-1.914,0-3.466-1.552-3.466-3.466c0-1.282,0.698-2.399,1.733-2.999V3.068c0-0.957,0.776-1.733,1.733-1.733s1.733,0.776,1.733,1.733V12.2c1.035,0.6,1.732,1.717,1.732,2.999C13.466,17.113,11.914,18.665,10,18.665">
+                                                    </path>
+                                                </svg>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-item">
+                                            <span class="card-value">22,54</span>
+                                            <sup class="units">°C</sup>
+                                        </div>
+                                        <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
+                                            <div class="progress-bar l-bg-green" role="progressbar" data-width="44%" aria-valuenow="22" aria-valuemin="0" aria-valuemax="50" style="width: 44%;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body">
+                                        <div class="row text-nowrap">
+                                            <div class="col-8">
+                                                <h5 class="card-title">Feuchtigkeit</h5>
+                                            </div>
+                                            <div class="col-4 text-right">
+                                                <span>
+                                                <svg class="svg-icon svg-humidity" viewBox="0 0 20 20">
+                                                    <path fill="none"
+                                                        d="M10,16.513c-2.249,0-4.071-1.822-4.071-4.07c0-0.226-0.182-0.407-0.407-0.407c-0.225,0-0.407,0.182-0.407,0.407c0,2.697,2.187,4.885,4.885,4.885c0.225,0,0.407-0.183,0.407-0.407S10.225,16.513,10,16.513M10,1.044c-0.814,0-6.513,6.92-6.513,11.398c0,3.597,2.916,6.513,6.513,6.513c3.597,0,6.513-2.916,6.513-6.513C16.513,7.964,10.813,1.044,10,1.044
+                                    M10,18.141c-3.148,0-5.699-2.65-5.699-5.92C4.301,8.372,9.593,2.011,10,2.011c0.407,0,5.698,6.36,5.698,10.209C15.698,15.49,13.147,18.141,10,18.141">
+                                                    </path>
+                                                </svg>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-item">
+                                            <span class="card-value">55</span>
+                                            <sup class="units">%</sup>
+                                        </div>
+                                        <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
+                                            <div class="progress-bar l-bg-green" role="progressbar" data-width="44%" aria-valuenow="44" aria-valuemin="0" aria-valuemax="100" style="width: 44%;"></div>
+                                        </div>
+                                        <span class="badge bg-secondary">-1</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <h5 class="card-title">CO2</h5>
+                                            </div>
+                                            <div class="col-4 text-right">
+                                                <span>
+                                                <svg class="svg-icon svg-air" viewBox="0 0 20 20">
+                                                    <path fill="none"
+                                                        d="M2.568,7.179H8.96c1.411,0,2.557-1.145,2.557-2.557c0-1.412-1.146-2.557-2.557-2.557H8.534c-0.235,0-0.426,0.19-0.426,0.426c0,0.236,0.191,0.426,0.426,0.426H8.96c0.941,0,1.704,0.763,1.704,1.705S9.901,6.327,8.96,6.327H2.568c-0.236,0-0.426,0.19-0.426,0.426C2.142,6.988,2.333,7.179,2.568,7.179
+                                    M15.778,7.179c0-0.941-0.763-1.704-1.704-1.704h-0.427c-0.235,0-0.426,0.19-0.426,0.426c0,0.235,0.19,0.426,0.426,0.426h0.427c0.47,0,0.852,0.382,0.852,0.852c0,0.471-0.382,0.853-0.852,0.853H0.864c-0.236,0-0.426,0.19-0.426,0.426c0,0.235,0.19,0.426,0.426,0.426h13.21C15.016,8.884,15.778,8.12,15.778,7.179
+                                    M16.631,9.736H2.568c-0.236,0-0.426,0.19-0.426,0.426c0,0.236,0.19,0.426,0.426,0.426h14.062c0.94,0,1.704,0.764,1.704,1.705s-0.764,1.704-1.704,1.704h-0.427c-0.235,0-0.426,0.19-0.426,0.427c0,0.235,0.19,0.426,0.426,0.426h0.427c1.411,0,2.557-1.145,2.557-2.557S18.042,9.736,16.631,9.736
+                                    M10.665,11.44H4.273c-0.236,0-0.426,0.19-0.426,0.426c0,0.236,0.19,0.427,0.426,0.427h6.392c1.412,0,2.557,1.145,2.557,2.557s-1.146,2.557-2.557,2.557h-0.426c-0.236,0-0.426,0.19-0.426,0.426s0.19,0.427,0.426,0.427h0.426c1.883,0,3.41-1.526,3.41-3.409S12.548,11.44,10.665,11.44">
+                                                    </path>
+                                                </svg>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-item">
+                                            <span class="card-value">550k</span>
+                                            <sup class="units">Ohm</sup>
+                                        </div>
+                                        <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
+                                            <div class="progress-bar l-bg-green" role="progressbar" data-width="25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" style="width: 25%;"></div>
+                                        </div>
+                                        <small class="text-muted">Last updated 3 mins ago</small>
+                                        <div class="card-footer mt-2 text-white bg-success">Status: Gut</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body circle-bar">
+                                        <h5 class="card-title">Luftqualit&auml;t</h5>
+                                        <!-- Progress Circle -->
+                                        <div class="progress mx-auto" data-value="80">
+                                            <span class="progress-left">
+                                            <span class="progress-bar border-primary"></span>
+                                            </span>
+                                            <span class="progress-right">
+                                            <span class="progress-bar border-primary"></span>
+                                            </span>
+                                            <div class="progress-value w-100 h-100 rounded-circle d-flex align-items-center justify-content-center">
+                                                <div class="h2 font-weight-bold">80<sup class="small">%</sup></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--\.row-->
+                        <div class="line"></div>
+                    </div>
+                    <!-- SCD30 -->
+                    <div id="scd30" class="visually-hidden">
+                        <div class="col-12">
+                            <h4>SCD30</h4>
+                        </div>
+                        <div class="card mb-5">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-2">
+                                        <button id="startSensorData" type="button" class="btn btn-success btn-sm visually-hidden startSensorData">Run</button>
+                                        <button id="stopSensorData" type="button" class="btn btn-warning btn-sm visually-hidden stopSensorData">Stop</button>
+                                        <!-- <button id="startSensorDataStream" type="button" class="btn btn-success btn-sm mb-3 startSensorDataStream">Stream</button> -->
+                                    </div>
+                                    <div class="d-none d-sm-block col-5 text-center text-muted">letzte Aktualiserung <span class="time">--:--:--</span>
+                                    </div>
+                                    <div class="col-3 fw-bold text-center"><span class="state"></span>
+                                    </div>
+                                    <div class="col-2 lds">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body">
+                                        <div class="row text-nowrap">
+                                            <div class="col-8">
+                                                <h5 class="card-title">Temperatur</h5>
+                                            </div>
+                                            <div class="col-4">
+                                                <span>
+                                                <svg class="svg-icon svg-temperature" viewBox="0 0 20 20">
+                                                    <path fill="none"
+                                                        d="M10.867,12.751V7.4c0-0.478-0.388-0.866-0.866-0.866S9.134,6.923,9.134,7.4v5.351c-1.008,0.357-1.733,1.316-1.733,2.448c0,1.436,1.164,2.599,2.6,2.599c1.435,0,2.599-1.163,2.599-2.599C12.6,14.067,11.876,13.108,10.867,12.751
+                                    M12.6,11.739V3.068c0-1.436-1.164-2.6-2.599-2.6c-1.436,0-2.6,1.164-2.6,2.6v8.671c-1.05,0.79-1.733,2.044-1.733,3.46c0,2.393,1.939,4.332,4.333,4.332c2.392,0,4.333-1.939,4.333-4.332C14.333,13.783,13.65,12.529,12.6,11.739 M10,18.665c-1.914,0-3.466-1.552-3.466-3.466c0-1.282,0.698-2.399,1.733-2.999V3.068c0-0.957,0.776-1.733,1.733-1.733s1.733,0.776,1.733,1.733V12.2c1.035,0.6,1.732,1.717,1.732,2.999C13.466,17.113,11.914,18.665,10,18.665">
+                                                    </path>
+                                                </svg>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-item">
+                                            <span class="temp card-value">---</span>
+                                            <sup class="units">°C</sup>
+                                        </div>
+                                        <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
+                                            <div class="progress-bar progress-temp l-bg-green" role="progressbar" aria-valuenow="0" aria-valuemin="-50" aria-valuemax="50" style="width: 0%;">
+                                            </div>
+                                        </div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="temp_max temp_unit badge_max fw-bold">---
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div class="temp_min temp_unit badge_min fw-bold">---
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body">
+                                        <div class="row text-nowrap">
+                                            <div class="col-8">
+                                                <h5 class="card-title">Feuchtigkeit</h5>
+                                            </div>
+                                            <div class="col-4">
+                                                <span>
+                                                <svg class="svg-icon svg-humidity" viewBox="0 0 20 20">
+                                                    <path fill="none"
+                                                        d="M10,16.513c-2.249,0-4.071-1.822-4.071-4.07c0-0.226-0.182-0.407-0.407-0.407c-0.225,0-0.407,0.182-0.407,0.407c0,2.697,2.187,4.885,4.885,4.885c0.225,0,0.407-0.183,0.407-0.407S10.225,16.513,10,16.513M10,1.044c-0.814,0-6.513,6.92-6.513,11.398c0,3.597,2.916,6.513,6.513,6.513c3.597,0,6.513-2.916,6.513-6.513C16.513,7.964,10.813,1.044,10,1.044
+                                    M10,18.141c-3.148,0-5.699-2.65-5.699-5.92C4.301,8.372,9.593,2.011,10,2.011c0.407,0,5.698,6.36,5.698,10.209C15.698,15.49,13.147,18.141,10,18.141">
+                                                    </path>
+                                                </svg>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-item">
+                                            <span class="relh card-value">--</span>
+                                            <sup class="units">%</sup>
+                                        </div>
+                                        <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
+                                            <div class="progress-bar progress-relh" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>
+                                        </div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="relh_max percent_unit badge_max fw-bold">--
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div class="relh_min percent_unit badge_min fw-bold">--
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <h5 class="card-title">CO2</h5>
+                                            </div>
+                                            <div class="col-4">
+                                                <span>
+                                                <svg class="svg-icon svg-air" viewBox="0 0 20 20">
+                                                    <path fill="none"
+                                                        d="M2.568,7.179H8.96c1.411,0,2.557-1.145,2.557-2.557c0-1.412-1.146-2.557-2.557-2.557H8.534c-0.235,0-0.426,0.19-0.426,0.426c0,0.236,0.191,0.426,0.426,0.426H8.96c0.941,0,1.704,0.763,1.704,1.705S9.901,6.327,8.96,6.327H2.568c-0.236,0-0.426,0.19-0.426,0.426C2.142,6.988,2.333,7.179,2.568,7.179
+                                    M15.778,7.179c0-0.941-0.763-1.704-1.704-1.704h-0.427c-0.235,0-0.426,0.19-0.426,0.426c0,0.235,0.19,0.426,0.426,0.426h0.427c0.47,0,0.852,0.382,0.852,0.852c0,0.471-0.382,0.853-0.852,0.853H0.864c-0.236,0-0.426,0.19-0.426,0.426c0,0.235,0.19,0.426,0.426,0.426h13.21C15.016,8.884,15.778,8.12,15.778,7.179
+                                    M16.631,9.736H2.568c-0.236,0-0.426,0.19-0.426,0.426c0,0.236,0.19,0.426,0.426,0.426h14.062c0.94,0,1.704,0.764,1.704,1.705s-0.764,1.704-1.704,1.704h-0.427c-0.235,0-0.426,0.19-0.426,0.427c0,0.235,0.19,0.426,0.426,0.426h0.427c1.411,0,2.557-1.145,2.557-2.557S18.042,9.736,16.631,9.736
+                                    M10.665,11.44H4.273c-0.236,0-0.426,0.19-0.426,0.426c0,0.236,0.19,0.427,0.426,0.427h6.392c1.412,0,2.557,1.145,2.557,2.557s-1.146,2.557-2.557,2.557h-0.426c-0.236,0-0.426,0.19-0.426,0.426s0.19,0.427,0.426,0.427h0.426c1.883,0,3.41-1.526,3.41-3.409S12.548,11.44,10.665,11.44">
+                                                    </path>
+                                                </svg>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-item">
+                                            <div class="row align-items-center">
+                                                <div class="col-7">
+                                                    <span class="co2 card-value">---</span>
+                                                    <sup class="units">ppm</sup>
+                                                </div>
+                                                <div class="col-5">
+                                                    <div class="co2-state fw-bold"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="progress mt-1 mb-2" data-height="8" style="height: 8px;">
+                                            <div class="progress-bar progress-co2 progress-co2-score-1" role="progressbar" style="width: 0%" aria-valuenow="0"></div>
+                                        </div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="co2_max ppm_unit badge_max fw-bold">---
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div class="co2_min ppm_unit badge_min fw-bold">---
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-3 col-sm-6 col-lg-6 col-12">
+                                <div class="card rounded h-100">
+                                    <div class="card-body circle-bar">
+                                        <h5 class="card-title">Luftqualit&auml;t</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--\card-deck-->
+                    <div class="line"></div>
+                </div>
+                <!--\.row-->
+            </div>
+            <!--\.container-fluid-->
+
+            <!-- Footer -->
+            <footer class="text-center text-lg-start bg-light text-muted">
+                <!-- Section: Social media -->
+                <section class="d-flex justify-content-center justify-content-lg-between p-4 border-bottom">
+                    <!-- Left -->
+                    <div class="me-5 d-none d-lg-block">
+                        <span>Get connected with us on social networks:</span>
+                    </div>
+                    <!-- Left -->
+
+                    <!-- Right -->
+                    <div>
+                        <a href="" class="me-4 text-reset">
+                            <i class="fab fa-github"></i>
+                        </a>
+                    </div>
+                    <!-- Right -->
+                </section>
+                <!-- Section: Social media -->
+
+                <!-- Section: Links  -->
+                <section class="">
+                    <div class="container text-center text-md-start mt-5">
+                        <!-- Grid row -->
+                        <div class="row mt-3">
+
+                            <!-- Grid column -->
+                            <div class="col-md-3 col-lg-4 col-xl-3 mx-auto mb-4">
+                                <!-- Content -->
+                                <h6 class="text-uppercase fw-bold mb-4">
+                                    <i class="fas fa-gem me-3"></i>Company name
+                                </h6>
+                                <p>
+                                    Here you can use rows and columns to organize your footer content. Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+                                </p>
+                            </div>
+                            <!-- Grid column -->
+                            <!-- Grid column -->
+                            <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mb-4">
+                                <!-- Links -->
+                                <h6 class="text-uppercase fw-bold mb-4">
+                                    Controlls
+                                </h6>
+                                <p>
+                                    <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                    <a href="#" class="text-reset reset-item">Reset</a>
+                                </p>
+                                <p>
+                                    <i class="fa-solid fa-compact-disc" aria-hidden="true"></i>
+                                    <a href="#" class="text-reset setup-item">Setup</a>
+                                </p>
+                                <p>
+                                    <i class="fa-solid fa-wifi" aria-hidden="true"></i>
+                                    <a href="#" class="text-reset wifi-item">WiFi</a>
+                                </p>
+                                <p>
+                                    <i class="fa-solid fa-broadcast-tower" aria-hidden="true"></i>
+                                    <a href="#" class="text-reset ap-item">Access Point</a>
+                                </p>
+                            </div>
+                            <!-- Grid column -->
+                            <!-- Grid column -->
+                            <div class="col-md-4 col-lg-3 col-xl-3 mx-auto mb-md-0 mb-4">
+                                <!-- Links -->
+                                <h6 class="text-uppercase fw-bold mb-4">Contact</h6>
+                                <p> <i class="fas fa-envelope me-3"></i> info@example.com</p>
+                            </div>
+                            <!-- Grid column -->
+
+                        </div>
+                        <!-- Grid row -->
+                    </div>
+                </section>
+                <!-- Section: Links  -->
+
+                <!-- Copyright -->
+                <div class="text-center p-4" style="background-color: rgba(0, 0, 0, 0.05);">
+                    © 2023 Copyright:
+                    <a class="text-reset fw-bold" href="#">André Schepers</a>
+                </div>
+                <!-- Copyright -->
+            </footer>
+            <!-- Footer -->
+        </div>
+        <!--\.wrapper-->
+    </div>
+
+        <!-- jQuery -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script>
+            window.jQuery || document.write('<script src="dist/js/jquery.min.js">\x3C/script>')
+        </script>
+        <!-- Bootstrap -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.2/umd/popper.min.js"></script>
+        <script>
+            window.Popper || document.write('<script src="dist/js/popper.min.js">\x3C/script>')
+        </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+        <script>
+            window.bootstrap || document.write('<script src="dist/js/bootstrap.bundle.min.js>\x3C/script>')
+        </script>
+        <!-- Fontawesome => contains only used icons-->
+        <script src="js/solid.slim.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/fontawesome.min.js"></script>
+        <script>
+            window.FontAwesome || document.write('<script src="dist/js/fontawesome.min.js>\x3C/script>')
+        </script>
+        <!-- jQuery Custom Scroller CDN -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
+        <script>
+            window.mCustomScrollbar || document.write('<script src="dist/js/jquery.mCustomScrollbar.concat.min.js>\x3C/script>')
+        </script>
+
+        <!-- Custom Javascript-->
+        <script src="js/script.js"></script>
+</body>
+
+</html>
