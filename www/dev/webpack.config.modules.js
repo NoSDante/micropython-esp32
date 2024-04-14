@@ -68,7 +68,7 @@ module.exports = {
                     to: "dist/js/v123.js"
                 },
                 {
-                    from: path.resolve(__dirname, './node_modules/@fontawesome/fontawesome-free/js/fontawesome.min.js'),
+                    from: path.resolve(__dirname, './node_modules/@fortawesome/fontawesome-free/js/fontawesome.min.js'),
                     to: "dist/js/asd.js"
                 },
                 {
