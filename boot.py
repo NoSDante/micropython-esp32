@@ -14,7 +14,6 @@ if not "boot.db" in listdir():
     print('setup...')
     try:
         from setup import setup
-
         setup()
     except Exception as e:
         raise Exception("setup failed", e)
