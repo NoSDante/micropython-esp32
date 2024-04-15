@@ -1,108 +1,65 @@
 from core.database import Database
+from os import listdir
 import time
-
-start = time.time()
 
 db = "/test.db"
 
-print("----- Test Database -----")
-print(db)
+start = time.time()
 
-print("----- INIT -----")
+print("\n----- TEST Database -----")
 database = Database(db, delete=True, create=True)
-print(database)
 database = Database(db)
-print(database)
 
-print("----- SAVE -----")
-"""
-save different data types
-"""
+
+print("\nTEST: save data types")
 database.save("DICTIONARY", {"boolean": "true", "integer": 31, "string": "json"})
 database.save("STRING", "Test")
 database.save("BOOLEAN", True)
 database.save("INTEGER", 42)
-print("save DICTIONARY:", {"boolean": "true", "integer": 31, "string": "json"})
-print("save STRING:", "Test")
-print("save BOOLEAN:", True)
-print("save STRING:", 42)
+assert len(database.keys()) >= 4, "4 keys saved!"
+assert database.get("STRING") == "Test", "value must be Test!"
+assert database.get("BOOLEAN") == True, "value must be True!"
+assert database.get("INTEGER") == 42, "value must be 42!"
+assert database.get("DICTIONARY") == {"boolean": "true", "integer": 31, "string": "json"}, "value must be a jsonObject!"
+assert type(database.get("STRING")) is str, "Variable is not of type str!"
+assert type(database.get("INTEGER")) is int, "Variable is not of type int!"
+assert type(database.get("BOOLEAN")) is bool, "Variable is not of type bool!"
+assert type(database.get("DICTIONARY")) is dict, "Variable is not of type dict!"
+# return object as json
+assert type(database.get()) is dict, "database returns not a dict!"
 
-print("----- GET KEY -----")
-"""
-return value by key
-"""
-print("keys found:", len(database.keys()))
-print(database.get("STRING"))
-print(database.get("BOOLEAN"))
-print(database.get("INTEGER"))
-print(database.get("DICTIONARY"))
 
-print("----- GET ALL -----")
-"""
-return object as json
-"""
-print(database.get())
-
-print("----- TYPES -----")
-"""
-get correct data type
-"""
-if isinstance(database.get("STRING"), str): print("STRING:PASS")
-if isinstance(database.get("INTEGER"), int): print("INTEGER:PASS")
-if isinstance(database.get("BOOLEAN"), bool): print("BOOLEAN:PASS")
-if isinstance(database.get("DICTIONARY"), dict): print("DICTIONARY:PASS")
-
-print("----- UPDATE -----")
-"""
-update a dictionary
-"""
+print("\nTEST: update")
 database.update(key="DICTIONARY", **{"boolean": "false", "integer": 42, "string": "update"})
-print(database.get("DICTIONARY"))
+assert database.get("DICTIONARY") == {"boolean": "false", "integer": 42, "string": "update"}, "update failed!"
 
-print("----- DELETE -----")
-"""
-delete key
-"""
+
+print("\nTEST: delete")
 database.save("DELETE", "delete value")
-print("saved to delete:", database.get("DELETE"))
+assert database.get("DELETE") == "delete value", "delete value"
 database.delete("DELETE")
-print("None if deleted:", database.get("DELETE"))
+assert database.get("DELETE") is None, "key not deleted"
 
-print("----- KEYS -----")
-"""
-returns all keys
-"""
-keys = database.keys()
-for key in keys:
-    print("key:", key)
 
-print("----- CLEAR -----")
-"""
-clear all keys
-"""
-if len(keys) != 0:
-    print("keys before:", len(keys))
-    print("clear...")
-    database.clear()
-    keys = database.keys()
-    print("keys after:", len(keys))
+print("\nTEST: clear")
+assert len(database.keys()) > 0
+database.clear()
+assert len(database.keys()) == 0, "database not cleared!"
 
-print("----- DROP -----")
-"""
-delete db-file
-"""
-print("drop database")
+
+print("\nTEST: drop")
 database.drop()
-del database
+assert (db in listdir()) == False, "database not dropped!"
 
-print("----- EXCEPTION -----")
-"""
-not found exception
-"""
+
+print("\nTEST: not found exception")
 try:
     Database("/test.db", create=False)
 except Exception as e:
-    print(e)
+    exception = True
+    assert "database '/test.db' does not exist" in str(e), "exception not occured!"
+assert exception == True, "exception not occured!"
 
-print("\n----- TEST FINISHED -----")
-print("execution time: " + str(time.time() - start) + " sec")
+
+print("\n----- TEST PASS -----")
+print("\nexecution time: " + str(time.time() - start) + " sec")
