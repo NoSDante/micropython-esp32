@@ -1,7 +1,8 @@
 from cryptolib import aes
+from os import urandom
 
 
-class Crypto():
+class Crypto:
     
     MODE_ECB = 1
     MODE_CBC = 2
@@ -47,7 +48,7 @@ class Crypto():
             return value.split(" ")[0]
         if self.mode == self.MODE_CBC:
             # Generate iv with HW random generator
-            iv = uos.urandom(self.blocksize)
+            iv = urandom(self.blocksize)
             self._init(iv)
             return iv + self.aes.encrypt(self._padding(value))
 
