@@ -10,6 +10,7 @@ def is_connected():
     wlan = WLAN(STA_IF)
     return wlan.active() and wlan.isconnected()
 
+
 def get_config(file="network.json", path="/config/"):
     """
     Get wifi-config from JSON-File
@@ -17,8 +18,9 @@ def get_config(file="network.json", path="/config/"):
     if not isinstance(file, str): raise ValueError('file must be a string')
     if len(file) == 0: raise ValueError('file string is empty')
     import json
-    with open(path+file) as json_data_file:
-        return(json.load(json_data_file))
+    with open(path + file) as json_data_file:
+        return (json.load(json_data_file))
+
 
 def get_network(database="/network.db", network="default"):
     """
@@ -28,6 +30,7 @@ def get_network(database="/network.db", network="default"):
     if len(network) == 0: raise ValueError('network string is empty')
     return Database(database).get(network)
 
+
 def get_mac():
     """
     Get the MAC address
@@ -36,8 +39,9 @@ def get_mac():
     wlan = WLAN(STA_IF)
     if not wlan.active(): wlan.active(True)
     import ubinascii
-    mac = ubinascii.hexlify(wlan.config('mac'),':').decode()
+    mac = ubinascii.hexlify(wlan.config('mac'), ':').decode()
     return mac
+
 
 def get_ip():
     """
@@ -47,6 +51,7 @@ def get_ip():
     if wlan.active() and wlan.isconnected(): details = wlan.ifconfig()
     return details[0] if details else None
 
+
 def get_essid():
     """
     Get the ESSID for the current active WLAN
@@ -54,6 +59,7 @@ def get_essid():
     wlan = WLAN(STA_IF)
     if wlan.active() and wlan.isconnected(): essid = wlan.config('essid')
     return essid if essid else None
+
 
 def get_ap_ip():
     """
@@ -63,6 +69,7 @@ def get_ap_ip():
     if ap.active(): details = ap.ifconfig()
     return details[0] if details else None
 
+
 def get_ap_essid():
     """
     Get the ESSID for the Access Point
@@ -71,13 +78,16 @@ def get_ap_essid():
     if ap.active(): essid = ap.config('essid')
     return essid if essid else None
 
+
 def get_netscan():
     """
     Get the networks found in WLAN
     """
+
     # custom functions to get rssi
     def get_rssi(scans):
         return scans[3]
+
     networks = []
     wlan = WLAN(STA_IF)
     if not wlan.active(): wlan.active(True)
@@ -88,6 +98,7 @@ def get_netscan():
         networks.append(scan[0].decode())
         #print('found essid: ' + scan[0].decode())
     return networks
+
 
 def smart_connect():
     database = Database(database="/network.db")
@@ -100,6 +111,7 @@ def smart_connect():
             if is_connected():
                 break
 
+
 def connect(essid=None, password="", store=False):
     """
     Connect to the WiFi network based on the configuration.
@@ -110,7 +122,7 @@ def connect(essid=None, password="", store=False):
     # default
     static_ip = False
     cfg = None
-    
+
     # load wifi-config if essid is None
     if essid is None:
         cfg = get_network()
@@ -126,28 +138,28 @@ def connect(essid=None, password="", store=False):
     else:
         # save network in db-file
         if store: save_network(essid, password)
-    
+
     # get config by essid
     if password is None and cfg is None:
         cfg = get_network(network=essid)
         #if cfg is None: cfg = get_config()
         if cfg is None:
             print("no network config found")
-            return        
+            return
         password = str.encode(cfg['password']).decode()
         static_ip = cfg['static_ip']
-    
+
     # init WLAN
     wlan = WLAN(STA_IF)
     wlan.active(True)
     wlan_essid = str.encode(wlan.config('essid')).decode()
-    
+
     # check if connection exists
     if wlan.isconnected() and (wlan_essid == essid):
         print('already connected with ' + essid)
         print('network:', wlan.ifconfig())
         return
-    
+
     # set static ip parameters from wifi-config
     if static_ip:
         ip = str.encode(cfg['ip']).decode()
@@ -155,7 +167,7 @@ def connect(essid=None, password="", store=False):
         gateway = str.encode(cfg['gateway']).decode()
         dns = str.encode(cfg['dns']).decode()
         wlan.ifconfig(ip, subnet, gateway, dns)
-    
+
     print('connecting to', essid, end='')
     try:
         wlan.connect(essid, password)
@@ -169,11 +181,12 @@ def connect(essid=None, password="", store=False):
             sleep_ms(500)
             print('.', end='')
         if not connected:
-            print(' connecting failed')        
+            print(' connecting failed')
             wlan.active(False)
     except Exception as e:
         # print error
         print(e)
+
 
 def disconnect():
     """
@@ -183,6 +196,7 @@ def disconnect():
     wlan = WLAN(STA_IF)
     if wlan.isconnected(): wlan.disconnect()
     wlan.active(False)
+
 
 def start_ap(essid="ESP32-AP", password="0000", max_clients=5):
     """
@@ -196,6 +210,7 @@ def start_ap(essid="ESP32-AP", password="0000", max_clients=5):
     except Exception as e:
         print(e)
 
+
 def stop_ap():
     """
     Stop Access Point
@@ -204,7 +219,8 @@ def stop_ap():
     ap = WLAN(AP_IF)
     ap.active(False)
 
+
 def save_network(essid, password, network=None):
     print("save network")
-    if not network: network=essid
+    if not network: network = essid
     Database(database="/network.db").save(network, {'essid': essid, 'password': password})

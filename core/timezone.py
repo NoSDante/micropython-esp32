@@ -1,15 +1,15 @@
 from machine import RTC
 from time import gmtime, mktime, localtime
-    
-class Timezone():
 
+
+class Timezone:
     HOST = "pool.ntp.org"
     NTP_DELTA = 3155673600
-    
+
     def __init__(self, utc=0):
         if not isinstance(utc, int): raise ValueError('UTC must be an integer')
         self.utc = utc
-        
+
     def gettime(self):
         import usocket as socket
         import ustruct as struct
@@ -33,7 +33,7 @@ class Timezone():
         t = mktime(localtime())
         tm = gmtime(t + TZ_OFFSET)
         RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
-    
+
     def settime(self):
         TZ_OFFSET = 3600 * self.utc
         t = self.gettime() - self.NTP_DELTA + TZ_OFFSET
