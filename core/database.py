@@ -1,7 +1,7 @@
 import btree, json
 
 
-class Database():
+class Database:
     
     class NotFoundException(Exception):
         pass

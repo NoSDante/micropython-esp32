@@ -1,6 +1,7 @@
 from machine import Pin, SDCard
 from os import mount, umount, listdir
 
+
 ## SD-Card Modul ESP32 TTGO-T8 V1.7
 # Slot 1 (mosi=15, sck=14, dat1=4, dat2=12)
 # define Pins cs=13, miso=2
@@ -28,6 +29,7 @@ def mounting(slot=1, width=1, path="/sd", cs=13, miso=2, debug=False):
         if debug: print('SDCard: errno', e)
         print("cannot mount SDCard")
         return False
+
 
 def pullup_pin(pins):
     for pin in pins:

@@ -1,4 +1,10 @@
-# tools
+from machine import I2C, Pin
+
+# I2C CONFIG
+I2C_SLOT = 1  # SDA=21, SCL=22
+SDA_PIN = 21
+SCL_PIN = 22
+
 
 def scan_i2c_bus(i2c):
     devices = i2c.scan()
@@ -28,14 +34,6 @@ def scan_i2c_address(i2c, addr_list=None):
 def i2c_devices(i2c, addr=None):
     devices = i2c.scan()
     return addr in devices
-
-
-# I2C CONFIG
-I2C_SLOT = 1  # SDA=21, SCL=22
-SDA_PIN = 21
-SCL_PIN = 22
-
-from machine import I2C, Pin
 
 
 def i2c_test():
@@ -74,4 +72,4 @@ def i2c_AS3935():
 
 i2c_test()
 i2c_AS3935()
-# settime_DS1307()
+# set_time_ds1307()
