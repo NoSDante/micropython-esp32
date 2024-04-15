@@ -271,7 +271,7 @@ class Scoring(object):
         return score
 
     def heatindex(self, temp, hum):
-        if temp is None or hum is None: return temp, status
+        if temp is None or hum is None: return temp, None
         # Convert celcius to fahrenheit
         fahrenheit = ((temp * 9 / 5) + 32)
         hi, score = None, None

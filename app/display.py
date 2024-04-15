@@ -64,7 +64,7 @@ class Display(object):
         }
         if not color in colors:
             color = self.DEFAULT_COLOR
-            if self.debug: print("display color '{}' does not exist".format(value))
+            if self.debug: print("display color '{}' does not exist".format(color))
         r = colors[color][0]
         g = colors[color][1]
         b = colors[color][2]
