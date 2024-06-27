@@ -69,7 +69,7 @@ function timeout(ms) {
 const LOCAL = true;
 
 /** MAIN */
-var page = {
+const page = {
 
     init: function() {
         this.setup();
@@ -148,9 +148,9 @@ var page = {
 
 }
 
-var server = {
+const server = {
 
-    ap_url: "http://192.168.1.4:8080",
+    ap_url: "http://192.168.4.1:8080",
     url: "",
     base_url: "http://192.168.2.",
     base_start: 100,
@@ -158,7 +158,7 @@ var server = {
     name: "MicroWebSrv2",
     port: ":8080",
     connected: false,
-    ap: false,
+    apif: false,
 
     base: function(url = server.base_url) {
 
@@ -189,48 +189,8 @@ var server = {
                 })
                 if (hit == true) break;
             }
-            // let counter = server.base_start;
-            // for (let i = server.base_start = 100; i <= server.base_end; i++) {
-            //     let url = server.base_url + i + server.port;
-            //     let msg = document.getElementById("notConnected")
-            //     server.getLocal(url, function(callback) {
-            //         counter++;
-            //         if (counter == server.base_end) {
-            //             switch (server.url.length) {
-            //                 case 0:
-            //                     msg.classList.remove("visually-hidden");
-            //                     msg.innerHTML = server.name + " is not connected!";
-            //                     break;
-            //                 case 1:
-            //                     msg.classList.add("visually-hidden");
-            //                     server.url = callback;
-            //                     server.connected = true;
-            //                     // init features
-            //                     init();
-            //                     break;
-            //             }
-            //             if (server.url.length > 1) {
-            //                 // msg.classList.add("visually-hidden");
-            //                 // server.url = callback;
-            //                 // server.connected = true;
-            //                 // init features
-            //                 // init();
-            //                 let list = document.getElementById("listServer")
-            //                 let ul = document.createElement('ul');
-            //                 list.innerHTML = server.url.length + " " + server.name + " found!";
-            //                 list.appendChild(ul);
-            //                 list.classList.remove("visually-hidden");
-            //                 server.url.forEach(function(item, index, array) {
-            //                     let li = document.createElement('li');
-            //                     ul.appendChild(li);
-            //                     li.innerHTML += "<a target=_blank href=" + item + ">" + server.name + " (" + item + ")</a>";
-            //                 });
-            //             }
-            //         }
-            //     })
-            // }
         } else {
-            if (window.location.protocol == "http:") {
+            if (window.location.protocol.match("http")) {
                 if (server.hasOwnProperty("url") && server.url.length != 0) {
                     url = server.url
                 } else {
@@ -255,7 +215,7 @@ var server = {
             hit = true;
             server.url = callback;
             server.connected = true;
-            server.ap = true;
+            server.apif = true;
             console.log("server url:", server.url)
                 // init features
             init();
@@ -333,6 +293,7 @@ var server = {
         })
     },
 
+    // ping server on local
     ping: function(url) {
         $.ajax({
             url: url,
@@ -389,7 +350,7 @@ var server = {
 }
 
 /** FEATURES */
-var dashboard = {
+const dashboard = {
 
     config: {
         dashboard: "#dashboard",
@@ -411,7 +372,7 @@ var dashboard = {
     systemstate: {},
 
     init: function() {
-        //$.extend(form.config, config);
+        //$.extend(dashboard.config, config);
         disableItems($(this.config.dashboard));
         this.setupEvent.done = false;
         this.setup();
@@ -443,8 +404,8 @@ var dashboard = {
 
     setNetState: function(callback) {
         for (const [key, value] of Object.entries(callback)) {
+
             let state = "unknown";
-            let item = [];
             let cls = "text-dark";
 
             if (key == "WIFI") {
@@ -474,7 +435,6 @@ var dashboard = {
                     cls = "text-danger"
                 }
                 this.setApState(state, cls);
-
             };
 
         }
@@ -668,7 +628,7 @@ var dashboard = {
     },
 }
 
-var bootmgr = {
+const bootmgr = {
 
     config: {
         $loadBootConfig: $("#loadBootConfig"),
@@ -1290,7 +1250,7 @@ var bootmgr = {
     }
 }
 
-var sensor = {
+const sensor = {
 
     running: false,
     retrys: 2,
