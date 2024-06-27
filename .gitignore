@@ -14,5 +14,5 @@ package-lock.json
 package.json
 /qodana.yaml
 /.idea/
-/www/dev/
 /dev/
+/www_dev/
