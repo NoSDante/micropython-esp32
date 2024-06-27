@@ -1,5 +1,4 @@
 from BaseMQ import BaseMQ 
-from micropython import const
 
 class MQ2(BaseMQ):
     ## Clean air coefficient
