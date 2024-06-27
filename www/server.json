@@ -1,8 +1,9 @@
 {
+    "ap_url": "http://192.168.4.1:8080",
     "url": "",
     "base_url": "http://192.168.2.",
     "base_start": 100,
-    "base_end": 115,
+    "base_end": 116,
     "name": "MicroWebSrv2",
     "port": ":8080"
 }
