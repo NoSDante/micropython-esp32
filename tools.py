@@ -1,4 +1,4 @@
-from machine import I2C, Pin
+from machine import I2C, Pin, SPI
 
 # I2C CONFIG
 I2C_SLOT = 1  # SDA=21, SCL=22
@@ -69,7 +69,17 @@ def i2c_AS3935():
             print("error initializing as3935", retry)
             sleep(0.5)
 
+def i2c_default_pinout():
+    print(I2C(0))
+    print(I2C(1))
+
+def spi_default_pinout():
+    print(SPI(1))
+    print(SPI(2))
+
+
 
 i2c_test()
-i2c_AS3935()
+#i2c_AS3935()
 # set_time_ds1307()
+spi_default_pinout()
