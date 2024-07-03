@@ -17,7 +17,6 @@ def scan_i2c_bus(i2c):
             print("Decimal address: ", device, " | Hexa address: ", hex(device))
     return len(devices)
 
-
 def scan_i2c_address(i2c, addr_list=None):
     if addr_list is None:
         addr_list = []
@@ -30,21 +29,9 @@ def scan_i2c_address(i2c, addr_list=None):
             if addr in devices:
                 print("Device found! Hexa address: ", hex(addr))
 
-
 def i2c_devices(i2c, addr=None):
     devices = i2c.scan()
     return addr in devices
-
-
-def i2c_test():
-    # i2c = I2C(I2C_SLOT, scl=Pin(SCL_PIN), sda=Pin(SDA_PIN))
-    i2c = I2C(I2C_SLOT)
-    scan_i2c_bus(i2c)
-    # SCD30=0x61, DS1307=0x68, BH1750=0x23, AS3539=0X01,0X02,0X03
-    addr_list = [0x61, 0x68, 0x23, 0X01, 0X02, 0X03]
-    scan_i2c_address(i2c, addr_list=addr_list)
-    print(i2c_devices(i2c, addr=0X01))
-
 
 def set_time_ds1307():
     from lib.ds1307 import DS1307
@@ -53,7 +40,6 @@ def set_time_ds1307():
     now = RTC().datetime()  # get date and time
     ds1307.datetime(now)
     print(ds1307.datetime())
-
 
 def i2c_AS3935():
     from time import sleep
@@ -78,8 +64,10 @@ def spi_default_pinout():
     print(SPI(2))
 
 
-
-i2c_test()
+#scan_i2c_bus(I2C(I2C_SLOT))
+# SCD30=0x61, DS1307=0x68, BH1750=0x23, AS3539=0X01,0X02,0X03
+#scan_i2c_address(I2C(I2C_SLOT), addr_list=[0x61, 0x68, 0x23, 0X01, 0X02, 0X03])         
 #i2c_AS3935()
-# set_time_ds1307()
-spi_default_pinout()
+#set_time_ds1307()
+#spi_default_pinout()
+#i2c_default_pinout()
