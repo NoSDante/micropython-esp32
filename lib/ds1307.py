@@ -35,9 +35,14 @@ CONTROL_REG  = const(7) # 0x07
 RAM_REG      = const(8) # 0x08-0x3F
 
 class DS1307(object):
+    class DeviceNotFound(Exception):
+        pass
     """Driver for the DS1307 RTC."""
     def __init__(self, i2c, addr=0x68):
-        if addr not in i2c.scan(): raise self.DeviceNotFound("I2C devcie not found on adress {}".format(hex(addr)))
+        if addr not in i2c.scan():
+            #raise self.DeviceNotFound("I2C devcie not found on adress {}".format(hex(addr)))
+            print("I2C devcie not found on adress {}".format(hex(addr)))
+            return None
         self.i2c = i2c
         self.addr = addr
         self.weekday_start = 1
