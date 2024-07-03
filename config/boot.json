@@ -12,19 +12,21 @@
         "MODEL": "TTGO T8 V1.7.1",
         "PSRAM": "8MB",
         "FLASH": "4MB",
-        "SDCARD": "Mount on SPI Slot 1",
-        "SDSLOT": "Slot 1 mosi=15, sck=14, dat1=4, dat2=12",
+        "SDCARD": "Mount on SPI Slot 2",
+        "SDSLOT": "Slot 2 mosi=15, sck=14, miso=2",
         "SDPINS": "Pins cs=13, miso=2"
     },
     "SDCARD": {
-        "SPI": 1,
+        "SPI": 2,
         "CS": 13,
         "MISO": 2,
+        "MOSI": 15,
+        "SCK": 14,
         "WIDTH": 1,
         "PATH": "/sd"
     },
     "RTC": {
-        "MODUL": "DS1307"
+        "MODUL": "DS13077"
     },
     "NETWORK": {
         "RECONNECT": 7200,
@@ -34,7 +36,7 @@
         "WIFI": true,
         "SMART": true,
         "AP_IF": true,
-        "AP": false
+        "AP": false,
         "FOR_TIMESYNC": false
     },
     "I2C": {

@@ -79,8 +79,12 @@ def init():
             width=boot.get("SDCARD").get("WIDTH"),
             cs=boot.get("SDCARD").get("CS"),
             miso=boot.get("SDCARD").get("MISO"),
+            mosi=boot.get("SDCARD").get("MOSI"),
+            sck=boot.get("SDCARD").get("SCK"),
             debug=debug
         )
+
+    gc.collect()
 
     """
     NETWORK
@@ -245,4 +249,4 @@ init()
 # run app
 from app.app import main
 
-main()
+#main()
