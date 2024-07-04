@@ -109,73 +109,81 @@ In der Konfigurationsdatei ```boot.json``` werden die Start-Parameter definiert,
 <p>
 
 	{
-	    "DEBUG"   : true,
-	    "TIMEZONE": {
-		"UTC"     : 1,
-		"ZONE"    : "MESZ - Mitteleuropäische Winterzeit (UTC+1)",
-		"SUMMMER" : 3,
-		"WINTER"  : 10
-	    },
-	    "DEVICE" : {
-		"TYPE"   : "ESP32-WROVER",
-		"BRAND"  : "Tonysa",
-		"MODEL"  : "TTGO T8 V1.7.1",
-		"PSRAM"  : "8MB",
-		"FLASH"  : "4MB",
-		"SDCARD" : "Mount on SPI Slot 1",
-		"SDSLOT" : "Slot 1 mosi=15, sck=14, dat1=4, dat2=12",
-		"SDPINS" : "Pins cs=13, miso=2"
-	    },
-	    "SDCARD" : {
-		"SPI"  : 1,
-		"CS"   : 13,
-		"MOSI" : 2,
-		"PATH" : "/sd"
-	    },
-	    "RTC" : {
-		"MODUL" : "DS1307"
-	    },
-	    "NETWORK" : {
-		"RECONNECT" : 7200,
-		"DATABASE"  : "/network.db",
-		"DEFAULT"   : "default",
-		"WIFI"      : false,
-		"SMART"     : true,
-		"AP_IF"     : false,
-		"AP"        : false
-	    },
-	     "I2C" : {
-		"SLOT" : 1,
-		"SDA"  : 21,
-		"SCL"  : 22,
-		"FREQ" : 400000
-	    }
+		"DEBUG"   : true,
+		"TIMEZONE": {
+			"UTC"     : 1,
+			"ZONE"    : "MESZ - Mitteleuropäische Winterzeit (UTC+1)",
+			"SUMMMER" : 3,
+			"WINTER"  : 10
+		},
+		"DEVICE" : {
+			"TYPE": "ESP32-WROVER",
+			"BRAND": "LilyGO",
+			"MODEL": "TTGO T8 V1.7.1",
+			"PSRAM": "8MB",
+			"FLASH": "4MB",
+			"SDCARD": "Mount on SPI Slot 2",
+			"SDSLOT": "Slot 2 mosi=15, sck=14, miso=2",
+			"SDPINS": "Pins cs=13, miso=2"
+		},
+		"SDCARD" : {
+			"SPI"  : 1,
+			"CS"   : 13,
+			"MOSI" : 2,
+			"PATH" : "/sd"
+		},
+		"RTC" : {
+			"MODUL" : "DS1307"
+		},
+		"NETWORK" : {
+			"RECONNECT" : 7200,
+			"DATABASE"  : "/network.db",
+			"DEFAULT"   : "default",
+			"WIFI"      : false,
+			"SMART"     : true,
+			"AP_IF"     : false,
+			"AP"        : false
+		},
+		"I2C" : {
+			"SLOT" : 1,
+			"SDA"  : 21,
+			"SCL"  : 22,
+			"FREQ" : 400000
+		}
 	}
 
 </p>
 </details>
 
-| Objekt     | Parameter | Typ     | Default   | Funktion                                                                              |
-|------------|-----------|---------|-----------|---------------------------------------------------------------------------------------|
-|            | DEBUG     | boolean | false     | Im Debug Modus werden mehr Logausgaben erzeugt                                        |
-|            | BLUETOOTH | boolean | ---       | nicht implementiert                                                                   |
-| TIMEZONE   |           | object  | undefined | Zeitsynchronisierung initialisieren                                                   |
-| TIMEZONE   | UTC       | integer | undefined | Zeitzone zur synchronisierung des internen RTC                                        |
-| TIMEZONE   | ZONE      | string  | undefined | Optional                                                                              |
-| SDCARD     |           | object  | undefined | SD-Card im Filesystem einbinden                                                       |
-| SDCARD     | PATH      | string  | undefined | Pfad zur SD-Card im Filesystem                                                        |
-| SDCARD     | SPI       | integer | undefined | SPI Slot                                                                              |
-| SDCARD     | CS        | integer | undefined | CS-Pin                                                                                |
-| SDCARD     | MOSI      | integer | undefined | MOSI-Pin                                                                              |
-| SDCARD     | WIDTH     | integer | undefined | selects the bus width for the SD/MMC interface.                                       |
-| RTC        |           | object  | undefined | externes RTC Modul verwenden, falls keine Zeitsynchronisierung möglich                |
-| RTC        | MODUL     | string  | undefined | Name des RTC Modul                                                                    |
-| NETWORK    |           | object  | defined   | WiFi und/oder Access Point initialisieren                                             |
-| NETWORK    | RECONNECT | integer | undefined | Interval zur WiFi Verbindungsprüfung, 0 = off (use in Application)                    |
-| NETWORK    | WIFI      | boolean | false     | WiFi initialisieren                                                                   |
-| NETWORK    | SMART     | boolean | undefined | Ablgeich zwischen WLAN-Scan und gespeicherten Netzwerken zur Verbindungsherstellung   |
-| NETWORK    | AP_IF     | boolean | false     | Access Point als Fallback initialisieren (WiFi not connected)                         |
-| NETWORK    | AP        | boolean | true      | Access Point initialisieren                                                           |
+| Objekt   | Parameter    | Typ     | Default   | Funktion                                                                            |
+|----------|--------------|---------|-----------|-------------------------------------------------------------------------------------|
+|          | DEBUG        | boolean | false     | Im Debug Modus werden mehr Logausgaben erzeugt                                      |
+|          | BLUETOOTH    | boolean | ---       | nicht implementiert                                                                 |
+| TIMEZONE |              | object  | undefined | Zeitsynchronisierung initialisieren                                                 |
+| TIMEZONE | UTC          | integer | undefined | Zeitzone zur Synchronisierung des internen RTC                                      |
+| TIMEZONE | ZONE         | string  | undefined | Optional                                                                            |
+| SDCARD   |              | object  | undefined | SD-Card im Filesystem einbinden                                                     |
+| SDCARD   | PATH         | string  | undefined | Pfad zur SD-Card im Filesystem                                                      |
+| SDCARD   | SPI          | integer | undefined | SPI Slot                                                                            |
+| SDCARD   | WIDTH        | integer | undefined | selects the bus width for the SD/MMC interface                                      |
+| SDCARD   | CS           | integer | undefined | CS-Pin                                                                              |
+| SDCARD   | MOSI         | integer | undefined | MOSI-Pin                                                                            |
+| SDCARD   | MISO         | integer | undefined | MISO-Pin                                                                            |
+| SDCARD   | SCK          | integer | undefined | SCK-Pin                                                                             |
+| RTC      |              | object  | undefined | externes RTC Modul verwenden, falls keine Zeitsynchronisierung möglich              |
+| RTC      | MODUL        | string  | undefined | Name des RTC Modul                                                                  |
+| NETWORK  |              | object  | defined   | WiFi und/oder Access Point initialisieren                                           |
+| NETWORK  | WIFI         | integer | undefined | WiFi initialisieren                                                                 |
+| NETWORK  | RECONNECT    | integer | undefined | Interval zur WiFi Verbindungsprüfung, 0 = off (use in Application)                  |
+| NETWORK  | FOR_TIMESYNC | boolean | undefined | WiFi temporär zur Synchronisierung des internen RTC verwenden                       |
+| NETWORK  | SMART        | boolean | undefined | Ablgeich zwischen WLAN-Scan und gespeicherten Netzwerken zur Verbindungsherstellung |
+| NETWORK  | AP_IF        | boolean | false     | Access Point als Fallback initialisieren (WiFi not connected)                       |
+| NETWORK  | AP           | boolean | true      | Access Point initialisieren                                                         |
+| I2C      |              | object  | undefined | I2C bus initialisieren                                                              |
+| I2C      | SLOT         | integer | undefined | I2C Slot                                                                            |
+| I2C      | SDA          | integer | undefined | SDA-Pin                                                                             |
+| I2C      | SCL          | integer | undefined | SCL-Pin                                                                             |
+| I2C      | FREQ         | integer | undefined | bus freqeunz                                                                        |
 
 boot config is missing => default
 
@@ -187,8 +195,7 @@ In der Konfigurationsdatei ```network.json``` werden die Neztwerkverbindungen ge
 ```
 <details><summary>network.json</summary>
 <p>
-	
-	```
+
 	{
 	    "default" : {
 		    "essid"     : "router",
@@ -213,19 +220,22 @@ In der Konfigurationsdatei ```network.json``` werden die Neztwerkverbindungen ge
 		    "password"  : "9812739812"
 	      }
 	}
-	```
+
 </p>
 </details>
 
-##### NETWORK
+#### NETWORK
 Zur Verwendung der Neztwerfunktionen müssen im Objekt ```NETWORK=true``` nachfolgende Parameter verwendet werden.
 
-
-#### WIFI
+##### WIFI
 Zur Initialisierung einer drahtlosen Neztwerkverbindung muss der Parameter ```WIFI=true``` im Objekt ```NETWORK``` gesetzt sein.
-##### SMART
-Ist der Parameter ```SMART=true``` zusätzlich gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und im ersten Trefferfall eine Verbindung hergestellt.\
+
+##### SMART (empfohlen)
+Ist der Parameter ```SMART=true``` zusätzlich gesetzt, werden die gespeicherten Netzwerke mit den WLAN-Scan des esp32 abgeglichen und eine Verbindung mit dem Siganstärksten Netzwerk hergestellt.\
 Wird die WiFi-Verbindung nicht ```SMART=false``` initialisiert, muss eine ```default``` Neztwerkverbindung in der Konfigurationsdatei ```network.json```definiert sein.
+
+##### FOR_TIMESYNC
+Die WiFi Verbindung wird nur temporär hergestellt, um die Zeit des internen RTC zu synchronisieren.
 
 #### Access Point
 
