@@ -30,6 +30,16 @@ class Sensors:
         except Exception as e:
             raise Exception(self.I2C_ERROR, e)
 
+    def init_VEML6075(self, i2c=None):
+        self.veml6075 = None
+        try:
+            from lib.DFRobot_VEML6075 import VEML6075
+        except ImportError as e:
+            print(self.IMPORT_ERROR, e)
+        if isinstance(i2c, I2C): self.i2c = i2c
+        self.VEML6075 = VEML6075(self.i2c)
+        self.VEML6075.data = {}
+
     def init_BH1750(self, i2c=None):
         self.bh1750 = None
         try:
@@ -39,6 +49,7 @@ class Sensors:
         if isinstance(i2c, I2C): self.i2c = i2c
         self.bh1750 = BH1750(self.i2c)
         self.bh1750.data = {}
+
 
     def init_SPS30(self, port=1, rx=9, tx=10, start=True, clean=True, sample=60):
         self.sps30 = None
